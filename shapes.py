@@ -324,28 +324,35 @@ class Icosahedron(Shape):
             node[2] = node[2]*distancemodifier
 
 
-    def add_mountain(self):
-        somenodenum = random.randrange(0, len(self._nodes))
-        nodes = [[somenodenum]]
-        all_nna = [somenodenum]
-        for i in range(1, 10):
-            nodes.append([])
-            for edge in self._edges:
-                for node in nodes[i-1]:
-                    if node == edge[0]:
-                        if not (edge[1] in all_nna):
-                            nodes[i].append(edge[1])
-                            all_nna.append(edge[1])
-                    elif node == edge[1]:
-                        if not (edge[0] in all_nna):
-                            nodes[i].append(edge[0])
-                            all_nna.append(edge[0])
+    def add_mountains(self, mountain_count):
 
-        i = int((random.random() * 0.2 + 0.95) * 10000 ) / 10000
-        for node_num_array in nodes:
-            for node_num in node_num_array:
-                self.change_distance(node_num, i)
-            i = 0.62*i + 0.38
+        max_height = 1.15
+        min_height = 0.95
+        height_range = max_height - min_height
+        spread_depth = 10
+        
+        for i in range(mountain_count):
+            height_factor = int((random.random() * height_range + min_height) * 10000 ) / 10000
+            somenodenum = random.randrange(0, len(self._nodes))
+            nodes = [[somenodenum]]
+            all_nna = [somenodenum]
+            self.change_distance(somenodenum, height_factor)
+            for i in range(1, spread_depth):
+                nodes.append([])
+                for edge in self._edges:
+                    for node in nodes[i-1]:
+                        if node == edge[0]:
+                            if not (edge[1] in all_nna):
+                                nodes[i].append(edge[1])
+                                all_nna.append(edge[1])
+                                self.change_distance(edge[1], height_factor)
+                        elif node == edge[1]:
+                            if not (edge[0] in all_nna):
+                                nodes[i].append(edge[0])
+                                all_nna.append(edge[0])
+                                self.change_distance(edge[0], height_factor)
+                height_factor = 0.62*height_factor + 0.38
+                
 
     def change_distance(self, node_num, distance_multiplier):
         self._nodes[node_num][0] = self._nodes[node_num][0]*distance_multiplier
@@ -405,11 +412,10 @@ def main():
     shape = Icosahedron(275)
     new_t = time.time() - t
     print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(complexity_level=4)
+    shape.complexify(complexity_level=5)
     new_t = time.time() - t
     print('Complexity finished after ', new_t, 'seconds.')
-    for i in range(100):
-        shape.add_mountain()
+    shape.add_mountains(100)
     new_t = time.time() - t
     print('Mountains finished after ', new_t, 'seconds.')
     images = shape.gen_gif((400, 400), ['x', 'y'])
