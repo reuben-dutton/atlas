@@ -68,7 +68,7 @@ class Shape:
 
     def gen_gif(self, canvasSize, angles, filename = 'movie.gif'):
         images = []
-        for i in range(396):
+        for i in range(400):
             if 'y' in angles:
                 self.rotate('y', 0.5)
             if 'z' in angles:
@@ -254,7 +254,6 @@ class Icosahedron(Shape):
 
     def complexify(self, complexity_level=1):
         for x in range(complexity_level):
-            t = time.time()
             new_faces = []
             new_edges = []
             new_nodes = []
@@ -338,6 +337,7 @@ class Icosahedron(Shape):
             all_nna = [somenodenum]
             self.change_distance(somenodenum, height_factor)
             for i in range(1, spread_depth):
+                height_factor = 0.62*height_factor + 0.38
                 nodes.append([])
                 for edge in self._edges:
                     for node in nodes[i-1]:
@@ -351,7 +351,6 @@ class Icosahedron(Shape):
                                 nodes[i].append(edge[0])
                                 all_nna.append(edge[0])
                                 self.change_distance(edge[0], height_factor)
-                height_factor = 0.62*height_factor + 0.38
                 
 
     def change_distance(self, node_num, distance_multiplier):
@@ -418,7 +417,7 @@ def main():
     shape.add_mountains(100)
     new_t = time.time() - t
     print('Mountains finished after ', new_t, 'seconds.')
-    images = shape.gen_gif((400, 400), ['x', 'y'])
+    images = shape.gen_gif((400, 400), ['x', 'y', 'z'])
     new_t = time.time() - t
     print('Movie.gif created after ', new_t, 'seconds.')
     imageio.mimsave('movie.gif', images, fps=60)
