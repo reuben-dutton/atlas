@@ -26,29 +26,26 @@ class Shape:
         raise NotImplementedError()
 
     def rotate(self, dimension, degrees):
-        nodes = self._nodes
         cosTheta = math.cos(math.radians(degrees))
         sinTheta = math.sin(math.radians(degrees))
         if dimension in ['x', 'X']:
-            for node in nodes:
+            for node in self._nodes:
                 y = node[1]
                 z = node[2]
                 node[1] = cosTheta * y - sinTheta * z
                 node[2] = sinTheta * y + cosTheta * z
         elif dimension in ['y', 'Y']:
-            for node in nodes:
+            for node in self._nodes:
                 x = node[0]
                 z = node[2]
                 node[0] = cosTheta * x - sinTheta * z
                 node[2] = sinTheta * x + cosTheta * z
         elif dimension in ['z', 'Z']:
-            for node in nodes:
+            for node in self._nodes:
                 x = node[0]
                 y = node[1]
                 node[0] = cosTheta * x - sinTheta * y
                 node[1] = sinTheta * x + cosTheta * y
-
-        self._nodes = nodes
     
 
     def draw_shape(self, canvasSize):
@@ -58,11 +55,23 @@ class Shape:
         image = Image.new("RGBA", canvasSize, color=(255, 255, 255, 255))
         draw = ImageDraw.Draw(image)
         nodesize = 1
+        draw_level_width = 20
+##        for z in range(-int(0.6self._diameter), int(0.6*self._diameter), draw_level_width):
+##            for face in self._faces:
+##                n1num, n2num, n3num = get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
+##                n1 = self._nodes[n1num]
+##                n2 = self._nodes[n2num]
+##                n3 = self._nodes[n3num]
+##                mid = get_middle_point(n1, n2, n3)
+##                if z <= mid[2] < z+draw_level_width:
+##                    draw.polygon([(n1[0]+xc, n1[1]+yc),(n2[0]+xc, n2[1]+yc),(n3[0]+xc, n3[1]+yc)], fill=(95, 95, 95))
         for edge in self._edges:
             n1 = self._nodes[edge[0]]
             n2 = self._nodes[edge[1]]
-            if (n1[2] > 0 or n2[2] > 0) or ((2*(n1[0]**2 + n1[1]**2)**0.5 > self._diameter) or (2*(n2[0]**2 + n2[1]**2)**0.5 > self._diameter)) :
-                draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(65, 65, 65, 255))
+            mid = get_middle_point(n1, n2)
+            #if z <= mid[2] < z+draw_level_width:
+            draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(65, 65, 65, 255))
+            
 
         return image
 
@@ -76,6 +85,8 @@ class Shape:
             if 'x' in angles:
                 self.rotate('x', 0.75)
             image = self.draw_shape(canvasSize)
+            if i % 50 == 49:
+                print('Finished for image no#', i+1)
             image = np.asarray(image)
             images.append(image)
         return images
@@ -249,21 +260,19 @@ class Icosahedron(Shape):
                     edge1 = self._edges[i]
                     edge2 = self._edges[j]
                     edge3 = self._edges[k]
-                    if check_edge(edge1, edge2, edge3) != False:
+                    if len(get_nodes(edge1, edge2, edge3)) == 3:
                         self._faces.append((i, j, k))
 
-    def complexify(self, complexity_level=1):
-        for x in range(complexity_level):
+    def complexify(self, comp=1):
+        for x in range(comp):
             new_faces = []
             new_edges = []
             new_nodes = []
-
-            facelength = len(self._faces)
-
+            
             k1 = 0
             k2 = 0
             
-            for i in range(facelength):
+            for i in range(len(self._faces)):
                 face = self._faces[i]
 
                 nodes_index = []
@@ -271,7 +280,7 @@ class Icosahedron(Shape):
 
                 edge1num, edge2num, edge3num = face[0], face[1], face[2]
                 edge1, edge2, edge3 = self._edges[edge1num], self._edges[edge2num], self._edges[edge3num]
-                node1num, node2num, node3num = check_edge(edge1, edge2, edge3)
+                node1num, node2num, node3num = get_nodes(edge1, edge2, edge3)
                 node1, node2, node3 = self._nodes[node1num], self._nodes[node2num], self._nodes[node3num]
                 
                 node12 = get_middle_point(node1, node2)
@@ -386,23 +395,25 @@ class Antiprism(Shape):
         pass
 
 
-def get_middle_point(point1, point2):
-    newx = (point1[0] + point2[0]) / 2
-    newy = (point1[1] + point2[1]) / 2
-    newz = (point1[2] + point2[2]) / 2
-    newnode = [newx, newy, newz]
+def get_middle_point(point1, point2, point3=None):
+    if point3==None:
+        newx = (point1[0] + point2[0]) / 2
+        newy = (point1[1] + point2[1]) / 2
+        newz = (point1[2] + point2[2]) / 2
+        newnode = [newx, newy, newz]
+    else:
+        newx = (point1[0] + point2[0] + point3[0]) / 3
+        newy = (point1[1] + point2[1] + point3[1]) / 3
+        newz = (point1[2] + point2[2] + point3[2]) / 3
+        newnode = [newx, newy, newz]
 
     return newnode
 
-def check_edge(edge1, edge2, edge3):
-    if (edge1[0] in edge2 and edge1[0] in edge3) or (edge1[1] in edge2 and edge1[1] in edge3):
-        return False
-    if (edge1[0] in edge2 or edge1[1] in edge2) and (edge1[0] in edge3 or edge1[1] in edge3) and (edge2[0] in edge3 or edge2[1] in edge3):
-        if (edge1[0] == edge2[0]):
-            return (edge1[0], edge1[1], edge2[1])
-        if (edge1[0] == edge2[1]):
-            return (edge1[0], edge1[1], edge2[0])
-    return False
+def get_nodes(edge1, edge2, edge3):
+    nodeset = set()
+    for nodenum in edge1 + edge2 + edge3:
+        nodeset.add(nodenum)
+    return list(nodeset)
          
 def main():
     
@@ -411,13 +422,13 @@ def main():
     shape = Icosahedron(275)
     new_t = time.time() - t
     print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(complexity_level=5)
+    shape.complexify(comp=4)
     new_t = time.time() - t
     print('Complexity finished after ', new_t, 'seconds.')
-    shape.add_mountains(100)
+    #shape.add_mountains(100)
     new_t = time.time() - t
     print('Mountains finished after ', new_t, 'seconds.')
-    images = shape.gen_gif((400, 400), ['x', 'y', 'z'])
+    images = shape.gen_gif((400, 400), ['x', 'y'])
     new_t = time.time() - t
     print('Movie.gif created after ', new_t, 'seconds.')
     imageio.mimsave('movie.gif', images, fps=60)
