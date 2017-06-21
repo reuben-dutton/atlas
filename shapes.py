@@ -66,11 +66,13 @@ class Shape:
 ##                if z <= mid[2] < z+draw_level_width:
 ##                    draw.polygon([(n1[0]+xc, n1[1]+yc),(n2[0]+xc, n2[1]+yc),(n3[0]+xc, n3[1]+yc)], fill=(95, 95, 95))
         for edge in self._edges:
-            n1 = self._nodes[edge[0]]
-            n2 = self._nodes[edge[1]]
+            n1num, n2num = edge
+            n1 = self._nodes[n1num]
+            n2 = self._nodes[n2num]
             mid = get_middle_point(n1, n2)
             #if z <= mid[2] < z+draw_level_width:
-            draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(65, 65, 65, 255))
+            if mid[2] > 0:
+                draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(65, 65, 65, 255))
             
 
         return image
@@ -78,12 +80,9 @@ class Shape:
     def gen_gif(self, canvasSize, angles, filename = 'movie.gif'):
         images = []
         for i in range(400):
-            if 'y' in angles:
-                self.rotate('y', 0.5)
-            if 'z' in angles:
-                self.rotate('z', 0.25)
-            if 'x' in angles:
-                self.rotate('x', 0.75)
+            self.rotate('x', 0.25)
+            self.rotate('y', 0.75)
+            self.rotate('z', 0.5)
             image = self.draw_shape(canvasSize)
             if i % 50 == 49:
                 print('Finished for image no#', i+1)
@@ -166,34 +165,6 @@ class Cube(Shape):
 
     def define_base_faces(self):
         pass
-
-
-    
-
-class Octahedron(Shape):
-
-    def __init__(self, diameter):
-        super().__init__(diameter)
-
-    def define_base_nodes(self):
-        pass
-
-    def define_base_edges(self):
-        pass
-        
-
-class Dodecahedron(Shape):
-
-    def __init__(self, diameter):
-        super().__init__(diameter)
-
-    def define_base_nodes(self):
-        pass
-
-    def define_base_edges(self):
-        pass
-
-
         
 
 class Icosahedron(Shape):
@@ -221,36 +192,36 @@ class Icosahedron(Shape):
 
     def define_base_edges(self):
         self._edges = []
-        self._edges.append((0, 2)) #0
-        self._edges.append((1, 3)) #1
-        self._edges.append((4, 6)) #2
-        self._edges.append((5, 7)) #3
-        self._edges.append((8, 10)) #4
-        self._edges.append((9, 11)) #5
-        self._edges.append((0, 4)) #6
-        self._edges.append((0, 6)) #7
-        self._edges.append((1, 4)) #8
-        self._edges.append((1, 6)) #9
-        self._edges.append((2, 5)) #10
-        self._edges.append((2, 7)) #11
-        self._edges.append((3, 5)) #12
-        self._edges.append((3, 7)) #13
-        self._edges.append((0, 8)) #14
-        self._edges.append((0, 9)) #15
-        self._edges.append((1, 10)) #16
-        self._edges.append((1, 11)) #17
-        self._edges.append((2, 8)) #18
-        self._edges.append((2, 9)) #19
-        self._edges.append((3, 10)) #20
-        self._edges.append((3, 11)) #21
-        self._edges.append((6, 9)) #22
-        self._edges.append((6, 11)) #23
-        self._edges.append((7, 9)) #24
-        self._edges.append((7, 11)) #25
-        self._edges.append((4, 8)) #26
-        self._edges.append((4, 10)) #27
-        self._edges.append((5, 8)) #28
-        self._edges.append((5, 10)) #29
+        self._edges.append({0, 2}) #0
+        self._edges.append({1, 3}) #1
+        self._edges.append({4, 6}) #2
+        self._edges.append({5, 7}) #3
+        self._edges.append({8, 10}) #4
+        self._edges.append({9, 11}) #5
+        self._edges.append({0, 4}) #6
+        self._edges.append({0, 6}) #7
+        self._edges.append({1, 4}) #8
+        self._edges.append({1, 6}) #9
+        self._edges.append({2, 5}) #10
+        self._edges.append({2, 7}) #11
+        self._edges.append({3, 5}) #12
+        self._edges.append({3, 7}) #13
+        self._edges.append({0, 8}) #14
+        self._edges.append({0, 9}) #15
+        self._edges.append({1, 10}) #16
+        self._edges.append({1, 11}) #17
+        self._edges.append({2, 8}) #18
+        self._edges.append({2, 9}) #19
+        self._edges.append({3, 10}) #20
+        self._edges.append({3, 11}) #21
+        self._edges.append({6, 9}) #22
+        self._edges.append({6, 11}) #23
+        self._edges.append({7, 9}) #24
+        self._edges.append({7, 11}) #25
+        self._edges.append({4, 8}) #26
+        self._edges.append({4, 10}) #27
+        self._edges.append({5, 8}) #28
+        self._edges.append({5, 10}) #29
 
     def define_base_faces(self):
         self._faces = []
@@ -260,62 +231,74 @@ class Icosahedron(Shape):
                     edge1 = self._edges[i]
                     edge2 = self._edges[j]
                     edge3 = self._edges[k]
-                    if len(get_nodes(edge1, edge2, edge3)) == 3:
+                    if check_edges(edge1, edge2, edge3):
                         self._faces.append((i, j, k))
 
     def complexify(self, comp=1):
         for x in range(comp):
             new_faces = []
             new_edges = []
-            new_nodes = []
+            new_nodes = self._nodes
+
+            nodelength = len(self._nodes)
+            edgelength = len(self._edges)
+            facelength = len(self._faces)
             
-            k1 = 0
-            k2 = 0
+
+            for i in range(edgelength):
+                node1num, node2num = self._edges[i]
+                node1, node2 = self._nodes[node1num], self._nodes[node2num]
+                midnode = get_middle_point(node1, node2)
+                new_nodes.append(midnode)
+                new_edges.extend([{node1num, nodelength + i}, {node2num, nodelength + i}])
             
-            for i in range(len(self._faces)):
+            
+            for i in range(facelength):
+                
                 face = self._faces[i]
-
-                nodes_index = []
-                edges_index = []
-
-                edge1num, edge2num, edge3num = face[0], face[1], face[2]
-                edge1, edge2, edge3 = self._edges[edge1num], self._edges[edge2num], self._edges[edge3num]
+                edgenum = [face[0], face[1], face[2]]
+                edge1, edge2, edge3 = self._edges[edgenum[0]], self._edges[edgenum[1]], self._edges[edgenum[2]]
                 node1num, node2num, node3num = get_nodes(edge1, edge2, edge3)
                 node1, node2, node3 = self._nodes[node1num], self._nodes[node2num], self._nodes[node3num]
                 
-                node12 = get_middle_point(node1, node2)
-                node13 = get_middle_point(node1, node3)
-                node23 = get_middle_point(node2, node3)
+                node12 = new_nodes[nodelength + edgenum[0]]
+                node13 = new_nodes[nodelength + edgenum[1]]
+                node23 = new_nodes[nodelength + edgenum[2]]
 
-                nodes = [node1, node2, node3, node12, node13, node23]
+                new_edges.append({nodelength + edgenum[0], nodelength + edgenum[1]})
+                new_edges.append({nodelength + edgenum[0], nodelength + edgenum[2]})
+                new_edges.append({nodelength + edgenum[1], nodelength + edgenum[2]})
 
-                for j in range(6):
-                    if nodes[j] in new_nodes:
-                        nodes_index.append(new_nodes.index(nodes[j]))
-                        k1+=1
-                    else:
-                        nodes_index.append(i*6 + j - k1)
-                        new_nodes.append(nodes[j])
-
-                edges = []
+                edgecheck = [new_edges[edgenum[0]*2], new_edges[edgenum[0]*2+1]]
+                edgecheck.extend([new_edges[edgenum[1]*2], new_edges[edgenum[1]*2+1]])
+                edgecheck.extend([new_edges[edgenum[2]*2], new_edges[edgenum[2]*2+1]])
+                edgecheck.append(new_edges[2*edgelength+i*3])
+                edgecheck.append(new_edges[2*edgelength+i*3+1])
+                edgecheck.append(new_edges[2*edgelength+i*3+2])
                 
-                edges.extend([(nodes_index[3], nodes_index[4]), (nodes_index[3], nodes_index[5]), (nodes_index[4], nodes_index[5])])
-                edges.extend([(nodes_index[0], nodes_index[3]), (nodes_index[0], nodes_index[4])])
-                edges.extend([(nodes_index[1], nodes_index[3]), (nodes_index[1], nodes_index[5])])
-                edges.extend([(nodes_index[2], nodes_index[4]), (nodes_index[2], nodes_index[5])])
+                for a in range(len(edgecheck)):
+                    for b in range(a+1, len(edgecheck)):
+                        for c in range(b+1, len(edgecheck)):
+                            edge1 = edgecheck[a]
+                            edge2 = edgecheck[b]
+                            edge3 = edgecheck[c]
+                            if check_edges(edge1, edge2, edge3):
+                                if a < 6:
+                                    f = edgenum[(a//2)]*2+(a%2)
+                                else:
+                                    f = 2*edgelength + i*3 + (a - 6)
+                                if b < 6:
+                                    g = edgenum[(b//2)]*2+(b%2)
+                                else:
+                                    g = 2*edgelength + i*3 + (b - 6)
+                                if c < 6:
+                                    h = edgenum[(c//2)]*2+(c%2)
+                                else:
+                                    h = 2*edgelength + i*3 + (c - 6)
+                                
+                                new_faces.append((f, g, h))
 
-                for j in range(9):
-                    if (edges[j] in new_edges) or ((edges[j][1], edges[j][0]) in new_edges):
-                        edges_index.append(new_edges.index(edges[j]))
-                        k2+=1
-                    else:
-                        edges_index.append(i*9 + j - k2)
-                        new_edges.append(edges[j])
-
-                new_faces.extend([(edges_index[0], edges_index[3], edges_index[4])])
-                new_faces.extend([(edges_index[1], edges_index[5], edges_index[6])])
-                new_faces.extend([(edges_index[2], edges_index[7], edges_index[8])])
-                new_faces.extend([(edges_index[0], edges_index[1], edges_index[2])])
+            print('Complexity Level', x+1, 'completed.')
                 
             self._nodes = new_nodes
             self._edges = new_edges
@@ -411,9 +394,17 @@ def get_middle_point(point1, point2, point3=None):
 
 def get_nodes(edge1, edge2, edge3):
     nodeset = set()
-    for nodenum in edge1 + edge2 + edge3:
+    for nodenum in edge1.union(edge2.union(edge3)):
         nodeset.add(nodenum)
     return list(nodeset)
+
+def check_edges(edge1, edge2, edge3):
+    if len(get_nodes(edge1, edge2, edge3)) == 3:
+        if edge1 != edge2 and edge2 != edge3 and edge1 != edge3:
+            return True
+    return False
+
+
          
 def main():
     
@@ -422,13 +413,13 @@ def main():
     shape = Icosahedron(275)
     new_t = time.time() - t
     print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(comp=4)
+    shape.complexify(comp=5)
     new_t = time.time() - t
     print('Complexity finished after ', new_t, 'seconds.')
     #shape.add_mountains(100)
     new_t = time.time() - t
     print('Mountains finished after ', new_t, 'seconds.')
-    images = shape.gen_gif((400, 400), ['x', 'y'])
+    images = shape.gen_gif((400, 400), ['x'])
     new_t = time.time() - t
     print('Movie.gif created after ', new_t, 'seconds.')
     imageio.mimsave('movie.gif', images, fps=60)
