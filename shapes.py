@@ -52,7 +52,7 @@ class Shape:
         xcentre, ycentre = canvasSize
         xc = xcentre/2
         yc = ycentre/2
-        image = Image.new("RGBA", canvasSize, color=(255, 255, 255, 255))
+        image = Image.new("RGBA", canvasSize, color=(0, 0, 0, 255))
         draw = ImageDraw.Draw(image)
         nodesize = 1
         draw_level_width = 20
@@ -72,14 +72,14 @@ class Shape:
             mid = get_middle_point(n1, n2)
             #if z <= mid[2] < z+draw_level_width:
             if mid[2] > 0:
-                draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(65, 65, 65, 255))
+                draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(125, 125, 125, 255))
             
 
         return image
 
     def gen_gif(self, canvasSize, angles, filename = 'movie.gif'):
         images = []
-        for i in range(400):
+        for i in range(385):
             self.rotate('x', 0.25)
             self.rotate('y', 0.75)
             self.rotate('z', 0.5)
@@ -234,8 +234,20 @@ class Icosahedron(Shape):
                     if check_edges(edge1, edge2, edge3):
                         self._faces.append((i, j, k))
 
-    def complexify(self, comp=1):
+    def complexify(self, comp=1, variance=False):
+        
+        max_height = 0.08
+        min_height = 0.92
+        height_range = max_height - min_height
+        
+        
         for x in range(comp):
+            max_heightfactor = 1 + max_height
+            min_heightfactor = 1 - (1-min_height)
+            height_range = max_heightfactor - min_heightfactor
+
+            height_chance = 0.85*np.exp(-5*x/(comp))
+            
             new_faces = []
             new_edges = []
             new_nodes = self._nodes
@@ -243,13 +255,22 @@ class Icosahedron(Shape):
             nodelength = len(self._nodes)
             edgelength = len(self._edges)
             facelength = len(self._faces)
+
+            
             
 
             for i in range(edgelength):
                 node1num, node2num = self._edges[i]
                 node1, node2 = self._nodes[node1num], self._nodes[node2num]
                 midnode = get_middle_point(node1, node2)
-                new_nodes.append(midnode)
+                if variance and random.random() > (1-height_chance) and x in range(comp-1):
+                    height_factor = int((random.random() * height_range + min_heightfactor) * 10000 ) / 10000
+                    new_nodes.append(self.change_distance(midnode, height_factor))
+                else:
+                    diff = math.fabs((math.sqrt(node2[0]**2 + node2[1]**2 + node2[2]**2))-(math.sqrt(node1[0]**2 + node1[1]**2 + node1[2]**2)))
+                    height = (math.sqrt(midnode[0]**2 + midnode[1]**2 + midnode[2]**2))
+                    height_factor = 1+diff/height
+                    new_nodes.append(self.change_distance(midnode, height_factor))
                 new_edges.extend([{node1num, nodelength + i}, {node2num, nodelength + i}])
             
             
@@ -304,78 +325,15 @@ class Icosahedron(Shape):
             self._edges = new_edges
             self._faces = new_faces
 
-            self.normalize()
             
-
-    def normalize(self):
-        for node in self._nodes:
-            distancemodifier = 0.5 * self._diameter/(math.sqrt(node[0]**2 + node[1]**2 + node[2]**2))
-            node[0] = node[0]*distancemodifier
-            node[1] = node[1]*distancemodifier
-            node[2] = node[2]*distancemodifier
-
-
-    def add_mountains(self, mountain_count):
-
-        max_height = 1.15
-        min_height = 0.95
-        height_range = max_height - min_height
-        spread_depth = 10
-        
-        for i in range(mountain_count):
-            height_factor = int((random.random() * height_range + min_height) * 10000 ) / 10000
-            somenodenum = random.randrange(0, len(self._nodes))
-            nodes = [[somenodenum]]
-            all_nna = [somenodenum]
-            self.change_distance(somenodenum, height_factor)
-            for i in range(1, spread_depth):
-                height_factor = 0.62*height_factor + 0.38
-                nodes.append([])
-                for edge in self._edges:
-                    for node in nodes[i-1]:
-                        if node == edge[0]:
-                            if not (edge[1] in all_nna):
-                                nodes[i].append(edge[1])
-                                all_nna.append(edge[1])
-                                self.change_distance(edge[1], height_factor)
-                        elif node == edge[1]:
-                            if not (edge[0] in all_nna):
-                                nodes[i].append(edge[0])
-                                all_nna.append(edge[0])
-                                self.change_distance(edge[0], height_factor)
-                
-
-    def change_distance(self, node_num, distance_multiplier):
-        self._nodes[node_num][0] = self._nodes[node_num][0]*distance_multiplier
-        self._nodes[node_num][1] = self._nodes[node_num][1]*distance_multiplier
-        self._nodes[node_num][2] = self._nodes[node_num][2]*distance_multiplier
-                
-
-        
-
-class Prism(Shape):
-
-    def __init__(self, diameter):
-        super().__init__(diameter)
-
-    def define_base_nodes(self):
-        pass
-
-    def define_base_edges(self):
-        pass
-
-        
-
-class Antiprism(Shape):
-
-    def __init__(self, diameter):
-        super().__init__(diameter)
-
-    def define_base_nodes(self):
-        pass
-
-    def define_base_edges(self):
-        pass
+    def change_distance(self, node, distance_multiplier=-100):
+        newnode = [0, 0, 0]
+        if distance_multiplier == -100:
+            distance_multiplier = 0.5 * self._diameter/(math.sqrt(node[0]**2 + node[1]**2 + node[2]**2))
+        newnode[0] = node[0]*distance_multiplier
+        newnode[1] = node[1]*distance_multiplier
+        newnode[2] = node[2]*distance_multiplier
+        return newnode
 
 
 def get_middle_point(point1, point2, point3=None):
@@ -410,16 +368,13 @@ def main():
     
     new_t = time.time() - t
     print('Process started at ', new_t, 'seconds.')
-    shape = Icosahedron(275)
+    shape = Icosahedron(550)
     new_t = time.time() - t
     print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(comp=5)
+    shape.complexify(comp=4, variance=True)
     new_t = time.time() - t
     print('Complexity finished after ', new_t, 'seconds.')
-    #shape.add_mountains(100)
-    new_t = time.time() - t
-    print('Mountains finished after ', new_t, 'seconds.')
-    images = shape.gen_gif((400, 400), ['x'])
+    images = shape.gen_gif((800, 800), ['x'])
     new_t = time.time() - t
     print('Movie.gif created after ', new_t, 'seconds.')
     imageio.mimsave('movie.gif', images, fps=60)
