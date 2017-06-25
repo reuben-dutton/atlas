@@ -236,17 +236,21 @@ class Icosahedron(Shape):
 
     def complexify(self, comp=1, variance=False):
         
-        max_height = 0.08
-        min_height = 0.92
-        height_range = max_height - min_height
+        max_height = 0.02
+        min_height = 0.98
+
+        total_max_height = self._diameter
         
         
         for x in range(comp):
-            max_heightfactor = 1 + max_height
-            min_heightfactor = 1 - (1-min_height)
-            height_range = max_heightfactor - min_heightfactor
+            max_heightfactor = 1 + max_height**(1-x/comp)
+            min_heightfactor = 1 - (1-min_height)**(1-x/comp)
 
-            height_chance = 0.85*np.exp(-5*x/(comp))
+            
+            height_range = max_heightfactor - min_heightfactor
+            mean_height = (max_heightfactor + min_heightfactor)/2
+
+            height_chance = 0.95*np.exp(-0.1*x/(comp))
             
             new_faces = []
             new_edges = []
@@ -263,14 +267,17 @@ class Icosahedron(Shape):
                 node1num, node2num = self._edges[i]
                 node1, node2 = self._nodes[node1num], self._nodes[node2num]
                 midnode = get_middle_point(node1, node2)
-                if variance and random.random() > (1-height_chance) and x in range(comp-1):
-                    height_factor = int((random.random() * height_range + min_heightfactor) * 10000 ) / 10000
-                    new_nodes.append(self.change_distance(midnode, height_factor))
+                height = (math.sqrt(midnode[0]**2 + midnode[1]**2 + midnode[2]**2))
+                diff = math.fabs((math.sqrt(node2[0]**2 + node2[1]**2 + node2[2]**2))-(math.sqrt(node1[0]**2 + node1[1]**2 + node1[2]**2)))
+                if variance:
+                    if (random.random() > (1-height_chance) and x in range(comp-1)) or diff==0:
+                        height_factor = random.normalvariate(mean_height, 0.5*height_range/3)
+                        new_nodes.append(self.change_distance(midnode, height_factor))
+                    else:
+                        height_factor = (1+(0.5*2**(0.001*(x-comp))*diff/height))
+                        new_nodes.append(self.change_distance(midnode, height_factor))
                 else:
-                    diff = math.fabs((math.sqrt(node2[0]**2 + node2[1]**2 + node2[2]**2))-(math.sqrt(node1[0]**2 + node1[1]**2 + node1[2]**2)))
-                    height = (math.sqrt(midnode[0]**2 + midnode[1]**2 + midnode[2]**2))
-                    height_factor = 1+diff/height
-                    new_nodes.append(self.change_distance(midnode, height_factor))
+                    new_nodes.append(self.change_distance(midnode))
                 new_edges.extend([{node1num, nodelength + i}, {node2num, nodelength + i}])
             
             
@@ -371,7 +378,7 @@ def main():
     shape = Icosahedron(550)
     new_t = time.time() - t
     print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(comp=4, variance=True)
+    shape.complexify(comp=5, variance=True)
     new_t = time.time() - t
     print('Complexity finished after ', new_t, 'seconds.')
     images = shape.gen_gif((800, 800), ['x'])
