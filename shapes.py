@@ -78,26 +78,20 @@ class Shape:
             n3 = self._nodes[n3num]
             mid = get_middle_point(n1, n2, n3)
             zcoord = mid[2]
-            draw_faces.append((zcoord, n1, n2, n3))
+            biome = face[3]
+            draw_faces.append((zcoord, n1, n2, n3, biome))
             
         draw_faces = sorted(draw_faces)
 
         for face in draw_faces:
-            
-            mid = get_middle_point(face[1], face[2], face[3])
-            height = math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2)
-            
-            if height < self._diameter/2:
-                fillcolor = (63, 156, 255, 255)
-            else:
-                fillcolor = (46, 183, 44, 255)
- 
+
+            biome = face[4]
+            fillcolor = self._biomes[biome]
             draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
-            draw.line((face[1][0] + xc, face[1][1] + yc, face[2][0] + xc, face[2][1] + yc), width=nodesize, fill=(50, 50, 50, 255))
-            draw.line((face[1][0] + xc, face[1][1] + yc, face[3][0] + xc, face[3][1] + yc), width=nodesize, fill=(50, 50, 50, 255))
-            draw.line((face[2][0] + xc, face[2][1] + yc, face[3][0] + xc, face[3][1] + yc), width=nodesize, fill=(50, 50, 50, 255))
-            
-            
+            edge_color = (255, 255, 255, 255)
+##            draw.line((face[1][0] + xc, face[1][1] + yc, face[2][0] + xc, face[2][1] + yc), width=nodesize, fill=edge_color)
+##            draw.line((face[1][0] + xc, face[1][1] + yc, face[3][0] + xc, face[3][1] + yc), width=nodesize, fill=edge_color)
+##            draw.line((face[2][0] + xc, face[2][1] + yc, face[3][0] + xc, face[3][1] + yc), width=nodesize, fill=edge_color)
 
         return image
 
@@ -115,88 +109,32 @@ class Shape:
             image = np.asarray(image)
             images.append(image)
         return images
-            
-        
-
-class Tetrahedron(Shape):
-
-    def __init__(self, diameter):
-        super().__init__(diameter)
-
-    def define_base_nodes(self):
-        d = self._diameter
-        ychange = 3*d/4
-        y_up = 2*ychange/3
-        y_down = y_up/2
-        z_up = ychange / (math.sqrt(3))
-        z_down = z_up/2
-        xchange = 2*ychange / (math.sqrt(3))
-        x_up = xchange/2
-        x_down = x_up
-        self._nodes = []
-        self._nodes.append([0, y_up, 0])
-        self._nodes.append([0, -y_down, z_up])
-        self._nodes.append([x_up, -y_down, -z_down])
-        self._nodes.append([-x_down, -y_down, -z_down])
-
-    def define_base_edges(self):
-        self._edges = []
-        self._edges.append((0, 1))
-        self._edges.append((0, 2))
-        self._edges.append((0, 3))
-        self._edges.append((1, 2))
-        self._edges.append((1, 3))
-        self._edges.append((2, 3))
-
-    def define_base_faces(self):
-        self._faces = []
-        self._faces.append((0, 1, 3))
-        self._faces.append((0, 2, 4))
-        self._faces.append((1, 2, 5))
-        self._faces.append((3, 4, 5))
-
-    
-
-class Cube(Shape):
-
-    def __init__(self, diameter):
-        super().__init__(diameter)
-
-    def define_base_nodes(self):
-        d = self._diameter
-        edge_length = d / (2*math.sqrt(3))
-        self._nodes = []
-        for i in range(2):
-            for j in range(2):
-                for k in range(2):
-                    a = (-1)**(i+1)
-                    b = (-1)**(j+1)
-                    c = (-1)**(k+1)
-                    self._nodes.append([a*edge_length, b*edge_length, c*edge_length])
-
-    def define_base_edges(self):
-        self._edges = []
-        self._edges.append((0, 1))
-        self._edges.append((0, 2))
-        self._edges.append((0, 4))
-        self._edges.append((1, 3))
-        self._edges.append((1, 5))
-        self._edges.append((2, 3))
-        self._edges.append((2, 6))
-        self._edges.append((4, 5))
-        self._edges.append((4, 6))
-        self._edges.append((5, 7))
-        self._edges.append((6, 7))
-        self._edges.append((3, 7))
-
-    def define_base_faces(self):
-        pass
-        
 
 class Icosahedron(Shape):
 
     def __init__(self, diameter):
         super().__init__(diameter)
+        self._noise_hash_large = hash(random.random())
+        self._noise_hash_med = hash(random.random())
+        self._noise_hash_small = hash(random.random())
+        self._moisture_hash = hash(random.random())
+
+        self._biomes = {}
+        self._biomes['SNOW'] = (248, 248, 248)
+        self._biomes['TUNDRA'] = (221, 221, 187, 255)
+        self._biomes['BARE'] = (187, 187, 187, 255)
+        self._biomes['SCORCHED'] = (153, 153, 153, 255)
+        self._biomes['TAIGA'] = (204, 212, 187, 255)
+        self._biomes['SHRUBLAND'] = (196, 204, 187, 255)
+        self._biomes['TEMPERATE DESERT'] = (228, 232, 202, 255)
+        self._biomes['TEMPERATE RAIN FOREST'] = (164, 196, 168, 255)
+        self._biomes['TEMPERATE DECIDUOUS FOREST'] = (180, 196, 169, 255)
+        self._biomes['GRASSLAND'] = (196, 212, 170, 255)
+        self._biomes['TROPICAL RAIN FOREST'] = (156, 187, 169, 255)
+        self._biomes['TROPICAL SEASONAL FOREST'] = (169, 204, 164, 255)
+        self._biomes['SUBTROPICAL DESERT'] = (233, 221, 199, 255)
+        self._biomes['OCEAN'] = (63, 156, 255, 255)
+        
 
     def define_base_nodes(self):
         d = self._diameter
@@ -342,6 +280,56 @@ class Icosahedron(Shape):
         if variance:
             self.gen_terrain(comp)
 
+        self.assign_colors(self._moisture_hash)
+
+    def assign_colors(self, random_hash):
+        for face in self._faces:
+            nodes = get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
+            node1, node2, node3 = self._nodes[nodes[0]], self._nodes[nodes[1]], self._nodes[nodes[2]]
+            mid = get_middle_point(node1, node2, node3)
+            node1height = math.sqrt(node1[0]**2 + node1[1]**2 + node1[2]**2)
+            node2height = math.sqrt(node2[0]**2 + node2[1]**2 + node2[2]**2)
+            node3height = math.sqrt(node3[0]**2 + node3[1]**2 + node3[2]**2)
+            height = math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2)
+            moisture_level = perlin(mid, self._diameter/5, 6, random_hash)
+            if moisture_level > 3.25:
+                moisture_level = moisture_level*(2 - moisture_level/6)
+            elif moisture_level < 2.75:
+                moisture_level = 6 - (6-moisture_level)*(1 + moisture_level/6)
+            moisture_level = math.ceil(moisture_level)
+            elevation_level = math.ceil(4*(height-self._min_height)/self._height_range)
+            
+            if (elevation_level, moisture_level) in [(4, 6), (4, 5), (4, 4)]:
+                biome = 'SNOW'
+            elif (elevation_level, moisture_level) in [(4, 3)]:
+                biome = 'TUNDRA'
+            elif (elevation_level, moisture_level) in [(4, 2)]:
+                biome = 'BARE'
+            elif (elevation_level, moisture_level) in [(4, 1)]:
+                biome = 'SCORCHED'
+            elif (elevation_level, moisture_level) in [(3, 6), (3, 5)]:
+                biome = 'TAIGA'
+            elif (elevation_level, moisture_level) in [(3, 4), (3, 3)]:
+                biome = 'SHRUBLAND'
+            elif (elevation_level, moisture_level) in [(3, 2), (3, 1), (2, 1)]:
+                biome = 'TEMPERATE DESERT'
+            elif (elevation_level, moisture_level) in [(2, 6)]:
+                biome = 'TEMPERATE RAIN FOREST'
+            elif (elevation_level, moisture_level) in [(2, 5), (2, 4)]:
+                biome = 'TEMPERATE DECIDUOUS FOREST'
+            elif (elevation_level, moisture_level) in [(2, 3), (2, 2), (1, 2)]:
+                biome = 'GRASSLAND'
+            elif (elevation_level, moisture_level) in [(1, 6), (1, 5)]:
+                biome = 'TROPICAL RAIN FOREST'
+            elif (elevation_level, moisture_level) in [(1, 4), (1, 3)]:
+                biome = 'TROPICAL SEASONAL FOREST'
+            elif (elevation_level, moisture_level) in [(1, 1)]:
+                biome = 'SUBTROPICAL DESERT'
+            else:
+                biome = 'OCEAN'
+            
+
+            face.append(biome)
         
 
     def gen_terrain(self, comp):
@@ -350,9 +338,6 @@ class Icosahedron(Shape):
         initial_angle = math.atan(2/(1 + math.sqrt(5)))
         angle = initial_angle / (2**comp)
         edge_length = self._diameter*math.sin(angle)
-        noise_hash_large = hash(random.random())
-        noise_hash_med = hash(random.random())
-        noise_hash_small = hash(random.random())
         periodlarge = self._diameter/5
         periodmed = self._diameter/10
         periodsmall = self._diameter/20
@@ -367,9 +352,10 @@ class Icosahedron(Shape):
 
         amplitude = 0.18
         
-        max_height = (1+amplitude*(lnd + mnd + snd))*0.5*self._diameter
-        min_height = (1-amplitude*(lnd + mnd + snd))*0.5*self._diameter
-        height_range = amplitude*self._diameter
+        self._max_height = (1+amplitude*(lnd + mnd + snd))*0.5*self._diameter
+        self._min_height = 0.5*self._diameter
+        
+        self._height_range = amplitude*self._diameter
 
 
 
@@ -389,12 +375,12 @@ class Icosahedron(Shape):
         new_nodes = []
 
         for node in self._nodes:
-            
-            large_noise = perlin(node, periodlarge, amplitude, noise_hash_large)
-            med_noise = perlin(node, periodmed, amplitude, noise_hash_med)
-            small_noise = perlin(node, periodsmall, amplitude, noise_hash_small)
 
             min_dist_ratio = 1
+            current_max_island_size = min_island_size
+            island_size_multiplier = 1
+
+            total_islands = 0
 
             for rm in rmarray:
                 island_size = rm[1]
@@ -404,12 +390,25 @@ class Icosahedron(Shape):
                     dist_ratio = 1
                 if dist_ratio < min_dist_ratio:
                     min_dist_ratio = dist_ratio
+                if dist_ratio < 1:
+                    total_islands += 1
+                if island_size > current_max_island_size and dist_ratio < 1:
+                    if total_islands == 1:
+                        island_size_multiplier = island_size/max_island_size
+                    else:
+                        current_max_island_size = island_size
+                        island_size_multiplier = current_max_island_size/max_island_size
+                
+
+            large_noise = perlin(node, periodlarge, amplitude, self._noise_hash_large)
+            med_noise = perlin(node, periodmed, amplitude, self._noise_hash_med)
+            small_noise = perlin(node, periodsmall, amplitude, self._noise_hash_small)
 
             noise = (lnd*large_noise + mnd*med_noise + snd*small_noise)
             actual_noise = noise - amplitude*(lnd + mnd + snd)*(min_dist_ratio)
             if actual_noise < 0:
                 actual_noise = 0
-            multiplier = 1 + actual_noise
+            multiplier = 1 + actual_noise*island_size_multiplier
 
             new_nodes.append(self.change_distance(node, multiplier))
                 
@@ -425,7 +424,7 @@ class Icosahedron(Shape):
         newnode[0] = node[0]*distance_multiplier
         newnode[1] = node[1]*distance_multiplier
         newnode[2] = node[2]*distance_multiplier
-        return newnode
+        return newnode    
 
 
 def get_middle_point(point1, point2, point3=None):
@@ -519,7 +518,7 @@ def main():
     shape = Icosahedron(375)
     new_t = time.time() - t
     print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(comp=5, variance=True)
+    shape.complexify(comp=7, variance=True)
     new_t = time.time() - t
     print('Complexity finished after ', new_t, 'seconds.')
     images = shape.gen_gif((600, 600), ['x'])
