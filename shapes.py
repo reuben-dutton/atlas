@@ -3,6 +3,7 @@ import numpy as np
 import imageio
 import math, random
 import time, datetime
+import colorsys as cs
 random.seed()
 
 t = time.time()
@@ -55,24 +56,47 @@ class Shape:
         image = Image.new("RGBA", canvasSize, color=(0, 0, 0, 255))
         draw = ImageDraw.Draw(image)
         nodesize = 1
-        draw_level_width = 20
-        for z in range(-int(0.6*self._diameter), int(0.6*self._diameter), draw_level_width):
-            for face in self._faces:
-                n1num, n2num, n3num = get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
-                n1 = self._nodes[n1num]
-                n2 = self._nodes[n2num]
-                n3 = self._nodes[n3num]
-                mid = get_middle_point(n1, n2, n3)
-                if z <= mid[2] < z+draw_level_width:
-                    draw.polygon([(n1[0]+xc, n1[1]+yc),(n2[0]+xc, n2[1]+yc),(n3[0]+xc, n3[1]+yc)], fill=(int(random.random()*255), int(random.random()*255), int(random.random()*255)))
-##        for edge in self._edges:
-##            n1num, n2num = edge
-##            n1 = self._nodes[n1num]
-##            n2 = self._nodes[n2num]
-##            mid = get_middle_point(n1, n2)
-##            #if z <= mid[2] < z+draw_level_width:
-##            if mid[2] > 0:
-##                draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(125, 125, 125, 255))
+        
+        for edge in self._edges:
+            n1num, n2num = edge
+            n1 = self._nodes[n1num]
+            n2 = self._nodes[n2num]
+            mid = get_middle_point(n1, n2)
+            if mid[2] > 0:
+                height = math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2)
+                if height < self._diameter/2:
+                    draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(0, 0, 200, 255))
+                else:
+                    draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(0, 200, 0, 255))
+
+        draw_faces = []
+
+        for face in self._faces:
+            n1num, n2num, n3num = get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
+            n1 = self._nodes[n1num]
+            n2 = self._nodes[n2num]
+            n3 = self._nodes[n3num]
+            mid = get_middle_point(n1, n2, n3)
+            zcoord = mid[2]
+            draw_faces.append((zcoord, n1, n2, n3))
+            
+        draw_faces = sorted(draw_faces)
+
+        for face in draw_faces:
+            
+            mid = get_middle_point(face[1], face[2], face[3])
+            height = math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2)
+            
+            if height < self._diameter/2:
+                fillcolor = (63, 156, 255, 255)
+            else:
+                fillcolor = (46, 183, 44, 255)
+ 
+            draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
+            draw.line((face[1][0] + xc, face[1][1] + yc, face[2][0] + xc, face[2][1] + yc), width=nodesize, fill=(50, 50, 50, 255))
+            draw.line((face[1][0] + xc, face[1][1] + yc, face[3][0] + xc, face[3][1] + yc), width=nodesize, fill=(50, 50, 50, 255))
+            draw.line((face[2][0] + xc, face[2][1] + yc, face[3][0] + xc, face[3][1] + yc), width=nodesize, fill=(50, 50, 50, 255))
+            
             
 
         return image
@@ -85,6 +109,8 @@ class Shape:
             self.rotate('z', 0.5)
             image = self.draw_shape(canvasSize)
             if i % 50 == 49:
+                print('Finished for image no#', i+1)
+            else:
                 print('Finished for image no#', i+1)
             image = np.asarray(image)
             images.append(image)
@@ -232,9 +258,14 @@ class Icosahedron(Shape):
                     edge2 = self._edges[j]
                     edge3 = self._edges[k]
                     if check_edges(edge1, edge2, edge3):
-                        self._faces.append((i, j, k))
+                        self._faces.append([i, j, k])
 
     def complexify(self, comp=1, variance=False):
+        
+        new_nodes = []
+        for node in self._nodes:
+            new_nodes.append(self.change_distance(node))
+        self._nodes = new_nodes
         
         for x in range(comp):
 
@@ -299,7 +330,7 @@ class Icosahedron(Shape):
                                 else:
                                     h = 2*edgelength + i*3 + (c - 6)
                                 
-                                new_faces.append((f, g, h))
+                                new_faces.append([f, g, h])
 
             print('Complexity Level', x+1, 'completed.')
                 
@@ -307,17 +338,85 @@ class Icosahedron(Shape):
             self._edges = new_edges
             self._faces = new_faces
 
+
         if variance:
-            new_nodes = []
-            initial_angle = math.atan(2/(1 + math.sqrt(5)))
-            angle = initial_angle / (2**comp)
-            edge_length = self._diameter*math.sin(angle)
-            magnitude = 5.5*edge_length
-            for node in self._nodes:
-                multiplier = 1 + perlin(node, magnitude)
-                new_node = self.change_distance(node, multiplier)
-                new_nodes.append(new_node)
-            self._nodes = new_nodes
+            self.gen_terrain(comp)
+
+        
+
+    def gen_terrain(self, comp):
+        nodes_length = len(self._nodes)
+
+        initial_angle = math.atan(2/(1 + math.sqrt(5)))
+        angle = initial_angle / (2**comp)
+        edge_length = self._diameter*math.sin(angle)
+        noise_hash_large = hash(random.random())
+        noise_hash_med = hash(random.random())
+        noise_hash_small = hash(random.random())
+        periodlarge = self._diameter/5
+        periodmed = self._diameter/10
+        periodsmall = self._diameter/20
+        
+
+        large_noise_dist = 1
+        lnd = large_noise_dist
+        med_noise_dist = 0.9
+        mnd = med_noise_dist
+        small_noise_dist = 0.5
+        snd = small_noise_dist
+
+        amplitude = 0.18
+        
+        max_height = (1+amplitude*(lnd + mnd + snd))*0.5*self._diameter
+        min_height = (1-amplitude*(lnd + mnd + snd))*0.5*self._diameter
+        height_range = amplitude*self._diameter
+
+
+
+        max_island_number = 14
+        min_island_number = 7
+
+        max_island_size = 2*self._diameter/3
+        min_island_size = self._diameter/10
+        
+        island_number = random.randrange(min_island_number, max_island_number + 1)
+        
+        rmarray = []
+        for i in range(island_number):
+            island_size = random.random()*(max_island_size - min_island_size) + min_island_size
+            rmarray.append([self._nodes[random.randrange(nodes_length)], island_size])
+        
+        new_nodes = []
+
+        for node in self._nodes:
+            
+            large_noise = perlin(node, periodlarge, amplitude, noise_hash_large)
+            med_noise = perlin(node, periodmed, amplitude, noise_hash_med)
+            small_noise = perlin(node, periodsmall, amplitude, noise_hash_small)
+
+            min_dist_ratio = 1
+
+            for rm in rmarray:
+                island_size = rm[1]
+                dist_from_mountain = math.sqrt((node[0]-rm[0][0])**2 + (node[1]-rm[0][1])**2 + (node[2]-rm[0][2])**2)
+                dist_ratio = dist_from_mountain/island_size
+                if dist_ratio > 1:
+                    dist_ratio = 1
+                if dist_ratio < min_dist_ratio:
+                    min_dist_ratio = dist_ratio
+
+            noise = (lnd*large_noise + mnd*med_noise + snd*small_noise)
+            actual_noise = noise - amplitude*(lnd + mnd + snd)*(min_dist_ratio)
+            if actual_noise < 0:
+                actual_noise = 0
+            multiplier = 1 + actual_noise
+
+            new_nodes.append(self.change_distance(node, multiplier))
+                
+            
+        self._nodes = new_nodes
+
+            
             
     def change_distance(self, node, distance_multiplier=-100):
         newnode = [0, 0, 0]
@@ -358,10 +457,10 @@ def check_edges(edge1, edge2, edge3):
 def lerp(a0, a1, w):
     return (1 - w)*a0 + w*a1
  
-def dotGridGradient(ix, iy, iz, x, y, z):
+def dotGridGradient(ix, iy, iz, x, y, z, random_hash):
     coordinate_hash = hash((ix, iy, iz))
-    combined_hash = hash((coordinate_hash, random.random()))
-    random.seed(coordinate_hash)
+    combined_hash = hash((coordinate_hash, random_hash))
+    random.seed(combined_hash)
 
     theta = 2*math.pi*random.random()
     randz = 2*random.random()-1
@@ -375,11 +474,11 @@ def dotGridGradient(ix, iy, iz, x, y, z):
 
     return (dz*randz + dx*randy + dy*randx)
 
-def perlin(node, magnitude):
+def perlin(node, period, amplitude, random_hash):
 
-    x = node[0]/magnitude
-    y = node[1]/magnitude
-    z = node[2]/magnitude
+    x = node[0]/period
+    y = node[1]/period
+    z = node[2]/period
 
     x0 = math.floor(x)
     x1 = x0 + 1
@@ -392,18 +491,18 @@ def perlin(node, magnitude):
     sy = 3*(y-y0)**2 - 2*(y-y0)**3
     sz = 3*(z-z0)**2 - 2*(z-z0)**3
 
-    n0 = dotGridGradient(x0, y0, z0, x, y, z)
-    n1 = dotGridGradient(x1, y0, z0, x, y, z)
+    n0 = dotGridGradient(x0, y0, z0, x, y, z, random_hash)
+    n1 = dotGridGradient(x1, y0, z0, x, y, z, random_hash)
     ix0 = lerp(n0, n1, sx)
-    n0 = dotGridGradient(x0, y1, z0, x, y, z)
-    n1 = dotGridGradient(x1, y1, z0, x, y, z)
+    n0 = dotGridGradient(x0, y1, z0, x, y, z, random_hash)
+    n1 = dotGridGradient(x1, y1, z0, x, y, z, random_hash)
     ix1 = lerp(n0, n1, sx)
 
-    n0 = dotGridGradient(x0, y0, z1, x, y, z)
-    n1 = dotGridGradient(x1, y0, z1, x, y, z)
+    n0 = dotGridGradient(x0, y0, z1, x, y, z, random_hash)
+    n1 = dotGridGradient(x1, y0, z1, x, y, z, random_hash)
     ix2 = lerp(n0, n1, sx)
-    n0 = dotGridGradient(x0, y1, z1, x, y, z)
-    n1 = dotGridGradient(x1, y1, z1, x, y, z)
+    n0 = dotGridGradient(x0, y1, z1, x, y, z, random_hash)
+    n1 = dotGridGradient(x1, y1, z1, x, y, z, random_hash)
     ix3 = lerp(n0, n1, sx)
     
     ix4 = lerp(ix0, ix1, sy)
@@ -411,7 +510,7 @@ def perlin(node, magnitude):
 
     value = lerp(ix4, ix5, sz)
 
-    return value*0.28
+    return 0.5*amplitude*(value + 1)
 
 def main():
     
@@ -420,7 +519,7 @@ def main():
     shape = Icosahedron(375)
     new_t = time.time() - t
     print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(comp=4, variance=True)
+    shape.complexify(comp=5, variance=True)
     new_t = time.time() - t
     print('Complexity finished after ', new_t, 'seconds.')
     images = shape.gen_gif((600, 600), ['x'])
