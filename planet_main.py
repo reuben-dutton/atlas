@@ -298,11 +298,43 @@ class GifCanvas:
         self._background_color = background_color
         self._gif_images = []
         self._bodies = {}
+        self.gen_base_canvas(100, 1, 1)
+
+    def gen_base_canvas(self, star_number, star_min_size, star_max_size):
+        self._base_canvas = Image.new("RGBA", self._canvas_size, color=self._background_color)
+        base_canvas_draw = ImageDraw.Draw(self._base_canvas)
+
+        greenwhite_star = (204, 255, 204, 255)
+        blue_star = (153, 204, 255, 255)
+        white_star = (255, 255, 255, 255)
+        yellowwhite_star = (255, 255, 153, 255)
+        yellow_star = (255, 232, 131, 255)
+        orange_star = (254, 204, 177, 255)
+        orangered_star = (255, 153, 102, 255)
+        red_star = (255, 204, 203, 255)
+        colors = []
+        colors.append(greenwhite_star)
+        colors.append(blue_star)
+        colors.append(white_star)
+        colors.append(yellowwhite_star)
+        colors.append(yellow_star)
+        colors.append(orange_star)
+        colors.append(orangered_star)
+        colors.append(red_star)
+
+        for i in range(int(self._canvas_width*self._canvas_height/1000)):
+            star_color = colors[random.randrange(8)]
+            xcentre = random.randrange(self._canvas_width)
+            ycentre = random.randrange(self._canvas_height)
+            star_size = random.randrange(star_min_size, star_max_size+1)
+            coordinates = [xcentre-math.ceil(star_size/2), ycentre-math.ceil(star_size/2), xcentre+math.ceil(star_size/2), ycentre+math.ceil(star_size/2)]
+            base_canvas_draw.ellipse(coordinates, fill=star_color)
+        
         
 
     def draw_image(self):
-        self._canvas = Image.new("RGBA", self._canvas_size, color=self._background_color)
-        self._draw = ImageDraw.Draw(self._canvas)
+        self._canvas = self._base_canvas.copy()
+        canvas_draw = ImageDraw.Draw(self._canvas)
 
         draw_faces = []
         for body, position in self._bodies.items():
@@ -321,7 +353,7 @@ class GifCanvas:
         for face in draw_faces:
             xc, yc = face[5]
             fillcolor = face[4]
-            self._draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
+            canvas_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
 
         return self._canvas
 
@@ -335,7 +367,7 @@ class GifCanvas:
         del self._bodies[body]
         
     def make_gif(self, fps=60, filepath='movie.gif'):
-        self._gif = []
+        self._gif_images = []
         for body, position in self._bodies.items():
             for i in range(385):
                 body.rotate('x', 0.25)
@@ -344,12 +376,14 @@ class GifCanvas:
                 image = self.draw_image()
                 image = np.asarray(image)
                 self._gif_images.append(image)
+                print('Image', i+1, 'completed.')
         self.save_gif(fps, filepath)
 
 
     def save_gif(self, fps=60, filepath='movie.gif'):
         if self._gif_images != []:
             imageio.mimsave(filepath, self._gif_images, fps=fps)
+            print('Gif saved!')
 
     
 
@@ -357,12 +391,13 @@ class GifCanvas:
 def main():
 
     background_color = (0, 0, 0, 255)
-    canvas_size = (600, 600)
+    canvas_size = (850, 850)
 
-    planet_type = pt.TerrestrialOceans(375)
+    planet_type = pt.TerrestrialOceans(550)
 
-    seed = eval(input('Please enter a seed: '))
-    planet = Planet(planet_type, seed, 3)
+    seed = str(input('Please enter a seed: '))
+    complexity = int(input('Please enter a complexity: '))
+    planet = Planet(planet_type, seed, complexity)
     
     gifcanvas = GifCanvas(canvas_size, background_color)
     gifcanvas.add_body(planet, 'centre')
