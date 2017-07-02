@@ -3,18 +3,22 @@ import numpy as np
 import imageio
 import math, random
 import time, datetime
-import colorsys as cs
 import planet_support as ps
+import planet_types as pt
 
-t = time.time()
+class Planet(object):
 
-class Planet:
-
-    def __init__(self, diameter):
-        self._diameter = diameter
+    def __init__(self, planet_type, seed, complexity):
+        self._planet = planet_type
+        self._diameter = self._planet.get_diameter()
         self.define_base_nodes()
         self.define_base_edges()
         self.define_base_faces()
+        self.complexify(complexity)
+        random.seed(seed)
+        self.gen_terrain()
+        self.assign_biomes()
+        
 
     def define_base_nodes(self):
         raise NotImplementedError()
@@ -46,110 +50,24 @@ class Planet:
                 y = node[1]
                 node[0] = cosTheta * x - sinTheta * y
                 node[1] = sinTheta * x + cosTheta * y
-    
-
-    def draw_shape(self, canvasSize):
-        xcentre, ycentre = canvasSize
-        xc = xcentre/2
-        yc = ycentre/2
-        image = Image.new("RGBA", canvasSize, color=(0, 0, 0, 255))
-        draw = ImageDraw.Draw(image)
-        nodesize = 1
-        
-        for edge in self._edges:
-            n1num, n2num = edge
-            n1 = self._nodes[n1num]
-            n2 = self._nodes[n2num]
-            mid = ps.get_middle_point(n1, n2)
-            if mid[2] > 0:
-                height = math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2)
-                if height < self._diameter/2:
-                    draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(0, 0, 200, 255))
-                else:
-                    draw.line((n1[0] + xc, n1[1] + yc, n2[0] + xc, n2[1] + yc), width=nodesize, fill=(0, 200, 0, 255))
-
-        draw_faces = []
-
-        for face in self._faces:
-            n1num, n2num, n3num = ps.get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
-            n1 = self._nodes[n1num]
-            n2 = self._nodes[n2num]
-            n3 = self._nodes[n3num]
-            mid = ps.get_middle_point(n1, n2, n3)
-            zcoord = mid[2]
-            biome = face[3]
-            draw_faces.append((zcoord, n1, n2, n3, biome))
-            
-        draw_faces = sorted(draw_faces)
-
-        for face in draw_faces:
-
-            biome = face[4]
-            fillcolor = self._biomes[biome]
-            draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
-            edge_color = (255, 255, 255, 255)
-
-        return image
-
-    def gen_gif(self, canvasSize, angles, filename = 'movie.gif'):
-        images = []
-        for i in range(385):
-            self.rotate('x', 0.25)
-            self.rotate('y', 0.75)
-            self.rotate('z', 0.5)
-            image = self.draw_shape(canvasSize)
-            if i % 50 == 49:
-                print('Finished for image no#', i+1)
-            else:
-                print('Finished for image no#', i+1)
-            image = np.asarray(image)
-            images.append(image)
-        return images
-
-class Earthlike(Planet):
-
-    def __init__(self, diameter, seed):
-        super().__init__(diameter)
-        random.seed(seed)
-        self._noise_hash_large = hash(random.random())
-        self._noise_hash_med = hash(random.random())
-        self._noise_hash_small = hash(random.random())
-        self._moisture_hash = hash(random.random())
-
-        self._biomes = {}
-        self._biomes['SNOW'] = (248, 248, 248)
-        self._biomes['TUNDRA'] = (221, 221, 187, 255)
-        self._biomes['BARE'] = (187, 187, 187, 255)
-        self._biomes['SCORCHED'] = (153, 153, 153, 255)
-        self._biomes['TAIGA'] = (204, 212, 187, 255)
-        self._biomes['SHRUBLAND'] = (196, 204, 187, 255)
-        self._biomes['TEMPERATE DESERT'] = (228, 232, 202, 255)
-        self._biomes['TEMPERATE RAIN FOREST'] = (164, 196, 168, 255)
-        self._biomes['TEMPERATE DECIDUOUS FOREST'] = (180, 196, 169, 255)
-        self._biomes['GRASSLAND'] = (196, 212, 170, 255)
-        self._biomes['TROPICAL RAIN FOREST'] = (156, 187, 169, 255)
-        self._biomes['TROPICAL SEASONAL FOREST'] = (169, 204, 164, 255)
-        self._biomes['SUBTROPICAL DESERT'] = (233, 221, 199, 255)
-        self._biomes['OCEAN'] = (63, 156, 255, 255)
-        
 
     def define_base_nodes(self):
         d = self._diameter
         a = d / math.sqrt(11 + 2*math.sqrt(5))
         phi = a * (1 + math.sqrt(5))/2
         self._nodes = []
-        self._nodes.append([0, -a, -phi])
-        self._nodes.append([0, -a, phi])
-        self._nodes.append([0, a, -phi])
-        self._nodes.append([0, a, phi])
-        self._nodes.append([-a, -phi, 0])
-        self._nodes.append([-a, phi, 0])
-        self._nodes.append([a, -phi, 0])
-        self._nodes.append([a, phi, 0])
-        self._nodes.append([-phi, 0, -a])
-        self._nodes.append([phi, 0, -a])
-        self._nodes.append([-phi, 0, a])
-        self._nodes.append([phi, 0, a])
+        self._nodes.append(ps.change_distance([0, -a, -phi], self._diameter))
+        self._nodes.append(ps.change_distance([0, -a, phi], self._diameter))
+        self._nodes.append(ps.change_distance([0, a, -phi], self._diameter))
+        self._nodes.append(ps.change_distance([0, a, phi], self._diameter))
+        self._nodes.append(ps.change_distance([-a, -phi, 0], self._diameter))
+        self._nodes.append(ps.change_distance([-a, phi, 0], self._diameter))
+        self._nodes.append(ps.change_distance([a, -phi, 0], self._diameter))
+        self._nodes.append(ps.change_distance([a, phi, 0], self._diameter))
+        self._nodes.append(ps.change_distance([-phi, 0, -a], self._diameter))
+        self._nodes.append(ps.change_distance([phi, 0, -a], self._diameter))
+        self._nodes.append(ps.change_distance([-phi, 0, a], self._diameter))
+        self._nodes.append(ps.change_distance([phi, 0, a], self._diameter))
 
     def define_base_edges(self):
         self._edges = []
@@ -195,14 +113,9 @@ class Earthlike(Planet):
                     if ps.check_edges(edge1, edge2, edge3):
                         self._faces.append([i, j, k])
 
-    def complexify(self, comp, variance=True):
-        
-        new_nodes = []
-        for node in self._nodes:
-            new_nodes.append(ps.change_distance(node, self._diameter))
-        self._nodes = new_nodes
-        
-        for x in range(comp):
+    def complexify(self, complexity):
+            
+        for x in range(complexity):
 
             new_faces = []
             new_edges = []
@@ -266,111 +179,75 @@ class Earthlike(Planet):
                                     h = 2*edgelength + i*3 + (c - 6)
                                 
                                 new_faces.append([f, g, h])
-
-            print('Complexity Level', x+1, 'completed.')
                 
             self._nodes = new_nodes
             self._edges = new_edges
             self._faces = new_faces
+            
 
-
-        if variance:
-            self.gen_terrain(comp)
-
-        self.assign_colors(self._moisture_hash)
-
-    def assign_colors(self, random_hash):
+    def assign_biomes(self):
+        
+        moisture_noise_hash = hash(random.random())
+        
         for face in self._faces:
+            
             nodes = ps.get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
+            
             node1, node2, node3 = self._nodes[nodes[0]], self._nodes[nodes[1]], self._nodes[nodes[2]]
+            
             mid = ps.get_middle_point(node1, node2, node3)
-            node1height = math.sqrt(node1[0]**2 + node1[1]**2 + node1[2]**2)
-            node2height = math.sqrt(node2[0]**2 + node2[1]**2 + node2[2]**2)
-            node3height = math.sqrt(node3[0]**2 + node3[1]**2 + node3[2]**2)
+
             height = math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2)
-            moisture_level = ps.perlin(mid, self._diameter/5, 6, random_hash)
-            if moisture_level > 3.25:
-                moisture_level = moisture_level*(2 - moisture_level/6)
-            elif moisture_level < 2.75:
-                moisture_level = 6 - (6-moisture_level)*(1 + moisture_level/6)
+
+            tml = self._planet.get_moisture_levels()
+            tel = self._planet.get_elevation_levels()
+            mw = self._planet.get_moisture_width()
+
+            min_height = self._planet.get_min_height()
+            height_range = self._planet.get_height_range()
+            
+            moisture_level = ps.perlin(mid, mw, tml, moisture_noise_hash)
+            
+            if moisture_level > 0.55*tml:
+                moisture_level = moisture_level*(2 - moisture_level/tml)
+            elif moisture_level < 0.45*tml:
+                moisture_level = tml - (tml-moisture_level)*(1 + moisture_level/tml)
+                
             moisture_level = math.ceil(moisture_level)
-            elevation_level = math.ceil(4*(height-self._min_height)/self._height_range)
+            elevation_level = math.ceil(tel*(height-min_height)/height_range)
             
-            if (elevation_level, moisture_level) in [(4, 6), (4, 5), (4, 4)]:
-                biome = 'SNOW'
-            elif (elevation_level, moisture_level) in [(4, 3)]:
-                biome = 'TUNDRA'
-            elif (elevation_level, moisture_level) in [(4, 2)]:
-                biome = 'BARE'
-            elif (elevation_level, moisture_level) in [(4, 1)]:
-                biome = 'SCORCHED'
-            elif (elevation_level, moisture_level) in [(3, 6), (3, 5)]:
-                biome = 'TAIGA'
-            elif (elevation_level, moisture_level) in [(3, 4), (3, 3)]:
-                biome = 'SHRUBLAND'
-            elif (elevation_level, moisture_level) in [(3, 2), (3, 1), (2, 1)]:
-                biome = 'TEMPERATE DESERT'
-            elif (elevation_level, moisture_level) in [(2, 6)]:
-                biome = 'TEMPERATE RAIN FOREST'
-            elif (elevation_level, moisture_level) in [(2, 5), (2, 4)]:
-                biome = 'TEMPERATE DECIDUOUS FOREST'
-            elif (elevation_level, moisture_level) in [(2, 3), (2, 2), (1, 2)]:
-                biome = 'GRASSLAND'
-            elif (elevation_level, moisture_level) in [(1, 6), (1, 5)]:
-                biome = 'TROPICAL RAIN FOREST'
-            elif (elevation_level, moisture_level) in [(1, 4), (1, 3)]:
-                biome = 'TROPICAL SEASONAL FOREST'
-            elif (elevation_level, moisture_level) in [(1, 1)]:
-                biome = 'SUBTROPICAL DESERT'
-            else:
-                biome = 'OCEAN'
+            biome_color = self._planet.get_biome_color(elevation_level, moisture_level)
             
-
-            face.append(biome)
+            face.append(biome_color)
         
 
-    def gen_terrain(self, comp):
+    def gen_terrain(self):
+
+        terrain_large_noise_hash = hash(random.random())
+        terrain_med_noise_hash = hash(random.random())
+        terrain_small_noise_hash = hash(random.random())
+
         nodes_length = len(self._nodes)
-
-        initial_angle = math.atan(2/(1 + math.sqrt(5)))
-        angle = initial_angle / (2**comp)
-        edge_length = self._diameter*math.sin(angle)
-        periodlarge = self._diameter/5
-        periodmed = self._diameter/10
-        periodsmall = self._diameter/20
         
+        largenoisewidth, mednoisewidth, smallnoisewidth = self._planet.get_terrain_width()
+        lnd, mnd, snd = self._planet.get_terrain_noise()
 
-        large_noise_dist = 1
-        lnd = large_noise_dist
-        med_noise_dist = 0.9
-        mnd = med_noise_dist
-        small_noise_dist = 0.5
-        snd = small_noise_dist
-
-        amplitude = 0.18
+        amplitude = self._planet.get_terrain_amplitude()
         
-        self._max_height = (1+amplitude*(lnd + mnd + snd))*0.5*self._diameter
-        self._min_height = 0.5*self._diameter
+        max_height = self._planet.get_max_height()
+        min_height = self._planet.get_min_height()
+        height_range = self._planet.get_height_range()
+
+        max_island_number, min_island_number = self._planet.get_island_number_range()
+        max_island_size, min_island_size = self._planet.get_island_size_range()
         
-        self._height_range = amplitude*self._diameter
-
-
-
-        max_island_number = 14
-        min_island_number = 7
-
-        max_island_size = 2*self._diameter/3
-        min_island_size = self._diameter/10
-        
-        island_number = random.randrange(min_island_number, max_island_number + 1)
-        
+        island_total = random.randrange(min_island_number, max_island_number + 1)
         rmarray = []
-        for i in range(island_number):
+        for i in range(island_total):
             island_size = random.random()*(max_island_size - min_island_size) + min_island_size
             rmarray.append([self._nodes[random.randrange(nodes_length)], island_size])
         
         new_nodes = []
-
         for node in self._nodes:
 
             min_dist_ratio = 1
@@ -397,9 +274,9 @@ class Earthlike(Planet):
                         island_size_multiplier = current_max_island_size/max_island_size
                 
 
-            large_noise = ps.perlin(node, periodlarge, amplitude, self._noise_hash_large)
-            med_noise = ps.perlin(node, periodmed, amplitude, self._noise_hash_med)
-            small_noise = ps.perlin(node, periodsmall, amplitude, self._noise_hash_small)
+            large_noise = ps.perlin(node, largenoisewidth, amplitude, terrain_large_noise_hash)
+            med_noise = ps.perlin(node, mednoisewidth, amplitude, terrain_med_noise_hash)
+            small_noise = ps.perlin(node, smallnoisewidth, amplitude, terrain_small_noise_hash)
 
             noise = (lnd*large_noise + mnd*med_noise + snd*small_noise)
             actual_noise = noise - amplitude*(lnd + mnd + snd)*(min_dist_ratio)
@@ -409,34 +286,87 @@ class Earthlike(Planet):
 
             new_nodes.append(ps.change_distance(node, self._diameter, multiplier))
                 
-            
         self._nodes = new_nodes
         
 
-class Gif_Canvas:
 
-    def __init__():
-        pass
+class GifCanvas:
 
+    def __init__(self, canvas_size, background_color):
+        self._canvas_width, self._canvas_height = canvas_size
+        self._canvas_size = canvas_size
+        self._background_color = background_color
+        self._gif_images = []
+        self._bodies = {}
+        
+
+    def draw_image(self):
+        self._canvas = Image.new("RGBA", self._canvas_size, color=self._background_color)
+        self._draw = ImageDraw.Draw(self._canvas)
+
+        draw_faces = []
+        for body, position in self._bodies.items():
+            for face in body._faces:
+                n1num, n2num, n3num = ps.get_nodes(body._edges[face[0]], body._edges[face[1]], body._edges[face[2]])
+                n1 = body._nodes[n1num]
+                n2 = body._nodes[n2num]
+                n3 = body._nodes[n3num]
+                mid = ps.get_middle_point(n1, n2, n3)
+                zcoord = mid[2]
+                color = face[3]
+                draw_faces.append((zcoord, n1, n2, n3, color, position))
+            
+        draw_faces = sorted(draw_faces)
+
+        for face in draw_faces:
+            xc, yc = face[5]
+            fillcolor = face[4]
+            self._draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
+
+        return self._canvas
+
+    def add_body(self, body, position='centre'):
+        if position == 'centre':
+            self._bodies[body] = (self._canvas_width/2, self._canvas_height/2)
+        else:
+            self._bodies[body] = position
+
+    def remove_body(self, body):
+        del self._bodies[body]
+        
+    def make_gif(self, fps=60, filepath='movie.gif'):
+        self._gif = []
+        for body, position in self._bodies.items():
+            for i in range(385):
+                body.rotate('x', 0.25)
+                body.rotate('y', 0.75)
+                body.rotate('z', 0.5)
+                image = self.draw_image()
+                image = np.asarray(image)
+                self._gif_images.append(image)
+        self.save_gif(fps, filepath)
+
+
+    def save_gif(self, fps=60, filepath='movie.gif'):
+        if self._gif_images != []:
+            imageio.mimsave(filepath, self._gif_images, fps=fps)
+
+    
 
 
 def main():
 
-    seed = 'planet sim 2017'
-    new_t = time.time() - t
-    print('Process started at ', new_t, 'seconds.')
-    shape = Earthlike(375, seed)
-    new_t = time.time() - t
-    print('Shape finished after ', new_t, 'seconds.')
-    shape.complexify(3)
-    new_t = time.time() - t
-    print('Complexity finished after ', new_t, 'seconds.')
-    images = shape.gen_gif((600, 600), ['x'])
-    new_t = time.time() - t
-    print('Movie.gif created after ', new_t, 'seconds.')
-    imageio.mimsave('movie.gif', images, fps=60)
-    new_t = time.time() - t
-    print('Gif saved after ', new_t, 'seconds.')
+    background_color = (0, 0, 0, 255)
+    canvas_size = (600, 600)
 
+    planet_type = pt.TerrestrialOceans(375)
+
+    seed = eval(input('Please enter a seed: '))
+    planet = Planet(planet_type, seed, 3)
+    
+    gifcanvas = GifCanvas(canvas_size, background_color)
+    gifcanvas.add_body(planet, 'centre')
+    gifcanvas.make_gif()
+    
 if __name__ == "__main__":
     main()
