@@ -346,20 +346,25 @@ class GifCanvas:
                 mid = ps.get_middle_point(n1, n2, n3)
                 zcoord = mid[2]
                 color = face[3]
-                draw_faces.append((zcoord, n1, n2, n3, color, position))
+                if self._bodies.get(position[0], None) != None:
+                    draw_faces.append((zcoord+position[1][2], n1, n2, n3, color, position[1][:2]))
+                else:
+                    draw_faces.append((zcoord, n1, n2, n3, color, position))
             
-        draw_faces = sorted(draw_faces)
+            draw_faces = sorted(draw_faces)
 
-        for face in draw_faces:
-            xc, yc = face[5]
-            fillcolor = face[4]
-            canvas_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
+            for face in draw_faces:
+                xc, yc = face[5]
+                fillcolor = face[4]
+                canvas_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
 
         return self._canvas
 
     def add_body(self, body, position='centre'):
         if position == 'centre':
             self._bodies[body] = (self._canvas_width/2, self._canvas_height/2)
+        elif self._bodies.get(position[0], None) != None:
+            self._bodies[body] = [position[0], [self._bodies[position[0]][0]-position[1], self._bodies[position[0]][1], 0]]
         else:
             self._bodies[body] = position
 
@@ -368,15 +373,20 @@ class GifCanvas:
         
     def make_gif(self, fps=60, filepath='movie.gif'):
         self._gif_images = []
-        for body, position in self._bodies.items():
-            for i in range(385):
+        for i in range(385):
+            for body, position in self._bodies.items():
                 body.rotate('x', 0.25)
                 body.rotate('y', 0.75)
                 body.rotate('z', 0.5)
+                if self._bodies.get(position[0], None) != None:
+                    position_node = position[1]
+                    new_position = ps.rotate_node(position_node, 'y', 360/385, list(self._bodies[position[0]]) + [0])
+                    position[1] = new_position
                 image = self.draw_image()
                 image = np.asarray(image)
                 self._gif_images.append(image)
-                print('Image', i+1, 'completed.')
+            print('Image', i+1, 'completed.')
+                
         self.save_gif(fps, filepath)
 
 
@@ -394,13 +404,16 @@ def main():
     canvas_size = (850, 850)
 
     planet_type = pt.TerrestrialOceans(550)
+    moon_type = pt.TerrestrialOceans(75)
 
     seed = str(input('Please enter a seed: '))
     complexity = int(input('Please enter a complexity: '))
     planet = Planet(planet_type, seed, complexity)
+    moon = Planet(moon_type, seed, complexity)
     
     gifcanvas = GifCanvas(canvas_size, background_color)
     gifcanvas.add_body(planet, 'centre')
+    gifcanvas.add_body(moon, (planet, 400))
     gifcanvas.make_gif()
     
 if __name__ == "__main__":

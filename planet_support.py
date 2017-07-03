@@ -11,6 +11,28 @@ def change_distance(node, diameter, distance_multiplier=None):
     newnode[2] = node[2]*distance_multiplier
     return newnode
 
+def rotate_node(node, dimension, degrees, origin):
+    cosTheta = math.cos(math.radians(degrees))
+    sinTheta = math.sin(math.radians(degrees))
+    node = [node[0]-origin[0], node[1]-origin[1], node[2]-origin[2]]
+    if dimension in ['x', 'X']:
+        y = node[1]
+        z = node[2]
+        node[1] = cosTheta * y - sinTheta * z
+        node[2] = sinTheta * y + cosTheta * z
+    elif dimension in ['y', 'Y']:
+        x = node[0]
+        z = node[2]
+        node[0] = cosTheta * x - sinTheta * z
+        node[2] = sinTheta * x + cosTheta * z
+    elif dimension in ['z', 'Z']:
+        x = node[0]
+        y = node[1]
+        node[0] = cosTheta * x - sinTheta * y
+        node[1] = sinTheta * x + cosTheta * y
+
+    return [node[0] + origin[0], node[1] + origin[1], node[2] + origin[2]]
+
 def get_middle_point(point1, point2, point3=None):
     if point3==None:
         newx = (point1[0] + point2[0]) / 2
@@ -94,3 +116,8 @@ def perlin(node, period, amplitude, random_hash):
     value = lerp(ix4, ix5, sz)
 
     return 0.5*amplitude*(value + 1)
+
+
+def perspective(node, origin):
+    pass
+    
