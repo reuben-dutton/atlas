@@ -120,4 +120,53 @@ def perlin(node, period, amplitude, random_hash):
 
 def perspective(node, origin):
     pass
+
+def crossproduct(node1, node2, node3):
+    #returns unit vector of cross product
+    x0, y0, z0 = node1
+    x1, y1, z1 = node2
+    x2, y2, z2 = node3
+    vectorx0, vectory0, vectorz0 = x1-x0, y1-y0, z1-z0
+    vectorx1, vectory1, vectorz1 = x2-x0, y2-y0, z2-z0
+    
+    newx = vectory0*vectorz1 - vectorz0*vectory1
+    newy = vectorz0*vectorx1 - vectorx0*vectorz1
+    newz = vectorx0*vectory1 - vectory0*vectorx1
+    length = math.sqrt(newx**2 + newy**2 + newz**2)
+    newx = newx/length
+    newy = newy/length
+    newz = newz/length
+    
+    vector_magnitude = math.sqrt((x0+newx)**2 + (y0 + newy)**2 + (z0+newz)**2)
+    if magnitude(node1) > vector_magnitude:
+        newx = -newx
+        newy = -newy
+        newz = -newz
+    
+    return (newx, newy, newz)
+
+def dotproduct(vector1, vector2):
+    return vector1[0]*vector2[0] + vector1[1]*vector2[1] + vector1[2]*vector2[2]
+
+def magnitude(vector):
+    return math.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2)
+
+
+
+def lighting(node1, node2, node3, color, light):
+    cross_product = crossproduct(node1, node2, node3)
+    dot_product = dotproduct(light, cross_product)
+    angle = math.degrees(math.acos(dot_product/(magnitude(cross_product)*magnitude(light))))
+    r, g, b, a = color
+    angleratio = 1-angle/180
+    #higher if more light, lower if less light
+    angleratio = 2*angleratio**2 - (4/3)*angleratio**3 + (1/3)*angleratio
+    #smoothing function
+    r, g, b = r*angleratio, g*angleratio, b*angleratio
+    adj_color = (int(r), int(g), int(b), a)
+    return adj_color
+        
+        
+        
+        
     

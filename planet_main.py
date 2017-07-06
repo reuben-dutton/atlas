@@ -250,39 +250,26 @@ class Planet(object):
         new_nodes = []
         for node in self._nodes:
 
-            min_dist_ratio = 1
-            current_max_island_size = min_island_size
-            island_size_multiplier = 1
-
-            total_islands = 0
+            min_dist_ratio = 0
 
             for rm in rmarray:
                 island_size = rm[1]
                 dist_from_mountain = math.sqrt((node[0]-rm[0][0])**2 + (node[1]-rm[0][1])**2 + (node[2]-rm[0][2])**2)
-                dist_ratio = dist_from_mountain/island_size
-                if dist_ratio > 1:
-                    dist_ratio = 1
-                if dist_ratio < min_dist_ratio:
+                dist_ratio = 1 - dist_from_mountain/island_size
+                if dist_ratio > min_dist_ratio:
                     min_dist_ratio = dist_ratio
-                if dist_ratio < 1:
-                    total_islands += 1
-                if island_size > current_max_island_size and dist_ratio < 1:
-                    if total_islands == 1:
-                        island_size_multiplier = island_size/max_island_size
-                    else:
-                        current_max_island_size = island_size
-                        island_size_multiplier = current_max_island_size/max_island_size
-                
+
+            
 
             large_noise = ps.perlin(node, largenoisewidth, amplitude, terrain_large_noise_hash)
             med_noise = ps.perlin(node, mednoisewidth, amplitude, terrain_med_noise_hash)
             small_noise = ps.perlin(node, smallnoisewidth, amplitude, terrain_small_noise_hash)
 
             noise = (lnd*large_noise + mnd*med_noise + snd*small_noise)
-            actual_noise = noise - amplitude*(lnd + mnd + snd)*(min_dist_ratio)
+            actual_noise = noise - amplitude*(lnd + mnd + snd)*(1-min_dist_ratio)
             if actual_noise < 0:
                 actual_noise = 0
-            multiplier = 1 + actual_noise*island_size_multiplier
+            multiplier = 1 + actual_noise
 
             new_nodes.append(ps.change_distance(node, self._diameter, multiplier))
                 
@@ -299,6 +286,9 @@ class GifCanvas:
         self._gif_images = []
         self._bodies = {}
         self.gen_base_canvas(100, 1, 1)
+
+    def set_lighting(self, light_vector):
+        self._light_vector = light_vector
 
     def gen_base_canvas(self, star_number, star_min_size, star_max_size):
         self._base_canvas = Image.new("RGBA", self._canvas_size, color=self._background_color)
@@ -343,9 +333,12 @@ class GifCanvas:
                 n1 = body._nodes[n1num]
                 n2 = body._nodes[n2num]
                 n3 = body._nodes[n3num]
+                
                 mid = ps.get_middle_point(n1, n2, n3)
                 zcoord = mid[2]
-                color = face[3]
+                
+                color = ps.lighting(n1, n2, n3, face[3], self._light_vector)
+                
                 if self._bodies.get(position[0], None) != None:
                     draw_faces.append((zcoord+position[1][2], n1, n2, n3, color, position[1][:2]))
                 else:
@@ -390,7 +383,7 @@ class GifCanvas:
         self.save_gif(fps, filepath)
 
 
-    def save_gif(self, fps=60, filepath='movie.gif'):
+    def save_gif(self, fps=60, filepath='movie.mp4'):
         if self._gif_images != []:
             imageio.mimsave(filepath, self._gif_images, fps=fps)
             print('Gif saved!')
@@ -401,19 +394,18 @@ class GifCanvas:
 def main():
 
     background_color = (0, 0, 0, 255)
-    canvas_size = (850, 850)
+    canvas_size = (864, 864)
 
     planet_type = pt.TerrestrialOceans(550)
-    moon_type = pt.TerrestrialOceans(75)
 
     seed = str(input('Please enter a seed: '))
     complexity = int(input('Please enter a complexity: '))
     planet = Planet(planet_type, seed, complexity)
-    moon = Planet(moon_type, seed, complexity)
     
     gifcanvas = GifCanvas(canvas_size, background_color)
     gifcanvas.add_body(planet, 'centre')
-    gifcanvas.add_body(moon, (planet, 400))
+    light_vector = [-1, 0, 0]
+    gifcanvas.set_lighting(light_vector)
     gifcanvas.make_gif()
     
 if __name__ == "__main__":
