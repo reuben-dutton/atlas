@@ -18,6 +18,8 @@ class Planet(object):
         random.seed(seed)
         self.gen_terrain()
         self.assign_biomes()
+        self._cloud_faces = []
+        self.gen_clouds()
         
 
     def define_base_nodes(self):
@@ -274,6 +276,25 @@ class Planet(object):
             new_nodes.append(ps.change_distance(node, self._diameter, multiplier))
                 
         self._nodes = new_nodes
+
+    def gen_clouds(self):
+        cloud_color = self._planet.get_cloud_color()
+        self._cloud_faces = []
+        if cloud_color == None:
+            pass
+        cloud_hash = hash(random.random())
+        cloud_cutoff = self._planet.get_cloud_cutoff()
+        cloud_noise_width = self._planet.get_cloud_width()
+        cloud_height = self._planet.get_cloud_height()
+        for face in self._faces:
+            node1, node2, node3 = ps.get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
+            n1, n2, n3 = self._nodes[node1], self._nodes[node2], self._nodes[node3]
+            middle_node = ps.get_middle_point(n1, n2, n3)
+            cloud_noise = ps.perlin(middle_node, cloud_noise_width, 1, cloud_hash)
+            if cloud_noise > cloud_cutoff:
+                new_cloud = [node1, node2, node3, cloud_color]
+                self._cloud_faces.append(new_cloud)
+            
         
 
 
@@ -328,6 +349,7 @@ class GifCanvas:
 
         draw_faces = []
         for body, position in self._bodies.items():
+            
             for face in body._faces:
                 n1num, n2num, n3num = ps.get_nodes(body._edges[face[0]], body._edges[face[1]], body._edges[face[2]])
                 n1 = body._nodes[n1num]
@@ -343,13 +365,41 @@ class GifCanvas:
                     draw_faces.append((zcoord+position[1][2], n1, n2, n3, color, position[1][:2]))
                 else:
                     draw_faces.append((zcoord, n1, n2, n3, color, position))
-            
-            draw_faces = sorted(draw_faces)
 
+            draw_faces = sorted(draw_faces)
+            
             for face in draw_faces:
                 xc, yc = face[5]
                 fillcolor = face[4]
                 canvas_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
+
+            draw_faces = []
+
+            for face in body._cloud_faces:
+                n1, n2, n3, color = body._nodes[face[0]], body._nodes[face[1]], body._nodes[face[2]], face[3]
+                cloud_height = body._planet.get_cloud_height()
+                newn1 = ps.change_distance(n1, 2*cloud_height)
+                newn2 = ps.change_distance(n2, 2*cloud_height)
+                newn3 = ps.change_distance(n3, 2*cloud_height)
+                mid = ps.get_middle_point(newn1, newn2, newn3)
+                zcoord = mid[2]
+                color = ps.lighting(n1, n2, n3, color, self._light_vector)
+                
+                if self._bodies.get(position[0], None) != None:
+                    draw_faces.append((zcoord+position[1][2], newn1, newn2, newn3, color, position[1][:2]))
+                else:
+                    draw_faces.append((zcoord, newn1, newn2, newn3, color, position))
+
+            draw_faces = sorted(draw_faces)
+
+            temp_image = Image.new("RGBA", self._canvas_size, color=0)
+            temp_draw = ImageDraw.Draw(temp_image)
+            for face in draw_faces:
+                if face[0] > 0:
+                    xc, yc = face[5]
+                    fillcolor = face[4]
+                    temp_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
+            self._canvas = Image.alpha_composite(self._canvas, temp_image)
 
         return self._canvas
 
@@ -394,9 +444,9 @@ class GifCanvas:
 def main():
 
     background_color = (0, 0, 0, 255)
-    canvas_size = (864, 864)
+    canvas_size = (750, 750)
 
-    planet_type = pt.TerrestrialOceans(550)
+    planet_type = pt.TerrestrialOceans(450)
 
     seed = str(input('Please enter a seed: '))
     complexity = int(input('Please enter a complexity: '))
@@ -404,7 +454,7 @@ def main():
     
     gifcanvas = GifCanvas(canvas_size, background_color)
     gifcanvas.add_body(planet, 'centre')
-    light_vector = [-1, 0, 0]
+    light_vector = [0, 0, 1]
     gifcanvas.set_lighting(light_vector)
     gifcanvas.make_gif()
     

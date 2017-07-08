@@ -151,8 +151,6 @@ def dotproduct(vector1, vector2):
 def magnitude(vector):
     return math.sqrt(vector[0]**2 + vector[1]**2 + vector[2]**2)
 
-
-
 def lighting(node1, node2, node3, color, light):
     cross_product = crossproduct(node1, node2, node3)
     dot_product = dotproduct(light, cross_product)

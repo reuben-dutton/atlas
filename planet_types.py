@@ -42,6 +42,18 @@ class BodySetting(object):
     def get_diameter(self):
         return self._diameter
 
+    def get_cloud_color(self):
+        return self._cloud_color
+
+    def get_cloud_height(self):
+        return self._cloud_height
+
+    def get_cloud_width(self):
+        return self._cloud_noise_width
+
+    def get_cloud_cutoff(self):
+        return self._cloud_noise_cutoff
+
 
 class PlanetSetting(BodySetting):
 
@@ -141,6 +153,81 @@ class TerrestrialOceans(PlanetSetting):
         self._axis = 2 #Placeholder for when I figure this shit out eventually
         self._rotational_speed = 2 #Another placeholder
 
+        #Clouds
+        self._cloud_color = (255, 255, 255, 185)
+        self._cloud_height = self._max_height * 0.95
+        self._cloud_noise_width = (1/5) * self._diameter
+        self._cloud_noise_cutoff = 0.5
+
+
+class TerrestrialIronOxide(PlanetSetting):
+
+    def __init__(self, diameter):
+
+        super().__init__(diameter)
+        
+        self._planet_type = 'TERRESTRIAL OCEANS'
+
+        #Terrain_generation
+        self._max_island_number = 18
+        self._min_island_number = 11
+        self._max_island_size = (2/3) * self._diameter
+        self._min_island_size = (1/5) * self._diameter
+
+        #Terrain_noise_generation
+        self._large_noise_weight = 1
+        self._medium_noise_weight = 0.4
+        self._small_noise_weight = 0.1
+        self._large_noise_width = (1/5) * self._diameter
+        self._medium_noise_width = (1/10) * self._diameter
+        self._small_noise_width = (1/20) * self._diameter
+        self._max_height = 0.56*self._diameter
+        self._min_height = 0.5*self._diameter
+        self._height_range = self._max_height - self._min_height
+        self._amplitude = self._height_range/(0.5*self._diameter*(self._large_noise_weight + self._medium_noise_weight + self._small_noise_weight))
+
+        #Moisture_noise_generation
+        self._moisture_noise_width = (1/5)*self._diameter
+
+        #Biomes
+        self._total_moisture_levels = 4
+        self._total_elevation_levels = 3
+        
+        #Biome colors
+        self._biome_dict = {}
+        self._biome_dict['SOOT'] = (130, 107, 70, 255)
+        self._biome_dict['HIGH IRON'] = (138, 94, 69, 255)
+        self._biome_dict['MEDIUM IRON'] = (197, 127, 91, 255)
+        self._biome_dict['LOW IRON'] = (203, 145, 124, 255)
+        self._biome_dict['ICE'] = (224, 255, 255, 255)
+        self._biome_dict['SNOW'] = (255, 255, 255, 255)
+        self._biome_dict['BASE TERRAIN'] = (168, 121, 103, 255)
+        # Elevation level, moisture_level --> Biome
+        self._biome_assignments = {}
+        self._biome_assignments[(3, 4)] = 'ICE'
+        self._biome_assignments[(3, 3)] = 'SNOW'
+        self._biome_assignments[(3, 2)] = 'HIGH IRON'
+        self._biome_assignments[(3, 1)] = 'MEDIUM IRON'
+        self._biome_assignments[(2, 4)] = 'HIGH IRON'
+        self._biome_assignments[(2, 3)] = 'MEDIUM IRON'
+        self._biome_assignments[(2, 2)] = 'LOW IRON'
+        self._biome_assignments[(2, 1)] = 'LOW IRON'
+        self._biome_assignments[(1, 4)] = 'MEDIUM IRON'
+        self._biome_assignments[(1, 3)] = 'MEDIUM IRON'
+        self._biome_assignments[(1, 2)] = 'LOW IRON'
+        self._biome_assignments[(1, 1)] = 'SOOT'
+        self._biome_other = 'BASE TERRAIN'
+
+        #Axis & Rotation Speed
+        self._axis = 2 #Placeholder for when I figure this shit out eventually
+        self._rotational_speed = 2 #Another placeholder
+
+        self._cloud_color = None
+        self._cloud_height = None
+        self._cloud_noise_width = None
+        self._cloud_noise_cutoff = None
+
+
 
 class ClassicMoon(MoonSetting):
 
@@ -193,3 +280,11 @@ class ClassicMoon(MoonSetting):
         #Axis & Rotation Speed
         self._axis = 2 #Placeholder for when I figure this shit out eventually
         self._rotational_speed = 2 #Another placeholder
+
+        self._cloud_color = None
+        self._cloud_height = None
+        self._cloud_noise_width = None
+        self._cloud_noise_cutoff = None
+
+
+
