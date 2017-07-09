@@ -6,52 +6,72 @@ import time, datetime
 import planet_support as ps
 import planet_types as pt
 
-class Planet(object):
+class PlanetaryObject(object):
 
     def __init__(self, planet_type, seed, complexity):
         self._planet = planet_type
         self._diameter = self._planet.get_diameter()
         self.define_base_nodes()
-        self.define_base_edges()
         self.define_base_faces()
         self.complexify(complexity)
         random.seed(seed)
-        self.gen_terrain()
-        self.assign_biomes()
-        self._cloud_faces = []
-        self.gen_clouds()
+        self.define_rotation()
+
+
+    def define_rotation(self):
+        spin_options = [-1, 1]
+        self._axis_spin = random.choice(spin_options)
+        self._axis_elevation_angle = random.randrange(-90, 90)
+        self._axis_azimuth_angle = random.randrange(-180, 180)
+        self.set_axis()
+
+    def spin(self, speed):
+        cosTheta1 = math.cos(math.radians(self._axis_azimuth_angle))
+        sinTheta1 = -math.sin(math.radians(self._axis_azimuth_angle))
+        cosTheta2 = math.cos(math.radians(self._axis_elevation_angle))
+        sinTheta2 = -math.sin(math.radians(self._axis_elevation_angle))
+        cosTheta3 = math.cos(math.radians(speed*self._axis_spin))
+        sinTheta3 = math.sin(math.radians(speed*self._axis_spin))
+        for node in self._nodes:
+            x = node[0]
+            z = node[2]
+            node[0] = cosTheta1 * x - sinTheta1 * z
+            node[2] = sinTheta1 * x + cosTheta1 * z
+            x = node[0]
+            y = node[1]
+            node[0] = cosTheta2 * x - sinTheta2 * y
+            node[1] = sinTheta2 * x + cosTheta2 * y
+            x = node[0]
+            z = node[2]
+            node[0] = cosTheta3 * x - sinTheta3 * z
+            node[2] = sinTheta3 * x + cosTheta3 * z
+            x = node[0]
+            y = node[1]
+            node[0] = cosTheta2 * x + sinTheta2 * y
+            node[1] = -sinTheta2 * x + cosTheta2 * y
+            x = node[0]
+            z = node[2]
+            node[0] = cosTheta1 * x + sinTheta1 * z
+            node[2] = -sinTheta1 * x + cosTheta1 * z
+
+
+            
         
 
-    def define_base_nodes(self):
-        raise NotImplementedError()
-
-    def define_base_edges(self):
-        raise NotImplementedError()
-
-    def define_base_faces(self):
-        raise NotImplementedError()
-
-    def rotate(self, dimension, degrees):
-        cosTheta = math.cos(math.radians(degrees))
-        sinTheta = math.sin(math.radians(degrees))
-        if dimension in ['x', 'X']:
-            for node in self._nodes:
-                y = node[1]
-                z = node[2]
-                node[1] = cosTheta * y - sinTheta * z
-                node[2] = sinTheta * y + cosTheta * z
-        elif dimension in ['y', 'Y']:
-            for node in self._nodes:
-                x = node[0]
-                z = node[2]
-                node[0] = cosTheta * x - sinTheta * z
-                node[2] = sinTheta * x + cosTheta * z
-        elif dimension in ['z', 'Z']:
-            for node in self._nodes:
-                x = node[0]
-                y = node[1]
-                node[0] = cosTheta * x - sinTheta * y
-                node[1] = sinTheta * x + cosTheta * y
+    def set_axis(self):
+        cosTheta = math.cos(math.radians(self._axis_elevation_angle))
+        sinTheta = math.sin(math.radians(self._axis_elevation_angle))
+        cosTheta2 = math.cos(math.radians(self._axis_azimuth_angle))
+        sinTheta2 = math.sin(math.radians(self._axis_azimuth_angle))
+        for node in self._nodes:
+            x = node[0]
+            y = node[1]
+            node[0] = cosTheta * x - sinTheta * y
+            node[1] = sinTheta * x + cosTheta * y
+            x = node[0]
+            z = node[2]
+            node[0] = cosTheta2 * x - sinTheta2 * z
+            node[2] = sinTheta2 * x + cosTheta2 * z
 
     def define_base_nodes(self):
         d = self._diameter
@@ -71,135 +91,79 @@ class Planet(object):
         self._nodes.append(ps.change_distance([-phi, 0, a], self._diameter))
         self._nodes.append(ps.change_distance([phi, 0, a], self._diameter))
 
-    def define_base_edges(self):
-        self._edges = []
-        self._edges.append({0, 2}) #0
-        self._edges.append({1, 3}) #1
-        self._edges.append({4, 6}) #2
-        self._edges.append({5, 7}) #3
-        self._edges.append({8, 10}) #4
-        self._edges.append({9, 11}) #5
-        self._edges.append({0, 4}) #6
-        self._edges.append({0, 6}) #7
-        self._edges.append({1, 4}) #8
-        self._edges.append({1, 6}) #9
-        self._edges.append({2, 5}) #10
-        self._edges.append({2, 7}) #11
-        self._edges.append({3, 5}) #12
-        self._edges.append({3, 7}) #13
-        self._edges.append({0, 8}) #14
-        self._edges.append({0, 9}) #15
-        self._edges.append({1, 10}) #16
-        self._edges.append({1, 11}) #17
-        self._edges.append({2, 8}) #18
-        self._edges.append({2, 9}) #19
-        self._edges.append({3, 10}) #20
-        self._edges.append({3, 11}) #21
-        self._edges.append({6, 9}) #22
-        self._edges.append({6, 11}) #23
-        self._edges.append({7, 9}) #24
-        self._edges.append({7, 11}) #25
-        self._edges.append({4, 8}) #26
-        self._edges.append({4, 10}) #27
-        self._edges.append({5, 8}) #28
-        self._edges.append({5, 10}) #29
-
     def define_base_faces(self):
         self._faces = []
-        for i in range(len(self._edges)):
-            for j in range(i+1, len(self._edges)):
-                for k in range(j+1, len(self._edges)):
-                    edge1 = self._edges[i]
-                    edge2 = self._edges[j]
-                    edge3 = self._edges[k]
-                    if ps.check_edges(edge1, edge2, edge3):
-                        self._faces.append([i, j, k])
+        self._faces.append([0, 2, 8])
+        self._faces.append([0, 2, 9])
+        self._faces.append([1, 3, 10])
+        self._faces.append([1, 3, 11])
+        self._faces.append([0, 4, 6])
+        self._faces.append([1, 4, 6])
+        self._faces.append([2, 5, 7])
+        self._faces.append([3, 5, 7])
+        self._faces.append([4, 8, 10])
+        self._faces.append([5, 8, 10])
+        self._faces.append([6, 9, 11])
+        self._faces.append([7, 9, 11])
+        self._faces.append([0, 4, 8])
+        self._faces.append([0, 6, 9])
+        self._faces.append([1, 4, 10])
+        self._faces.append([1, 6, 11])
+        self._faces.append([2, 5, 8])
+        self._faces.append([2, 7, 9])
+        self._faces.append([3, 5, 10])
+        self._faces.append([3, 7, 11])
 
     def complexify(self, complexity):
             
         for x in range(complexity):
 
             new_faces = []
-            new_edges = []
-            new_nodes = self._nodes
-
             nodelength = len(self._nodes)
-            edgelength = len(self._edges)
-            facelength = len(self._faces)
-
-            for i in range(edgelength):
-                node1num, node2num = self._edges[i]
-                node1, node2 = self._nodes[node1num], self._nodes[node2num]
-                midnode = ps.get_middle_point(node1, node2)
-
-                new_nodes.append(ps.change_distance(midnode, self._diameter))
-                    
-                new_edges.extend([{node1num, nodelength + i}, {node2num, nodelength + i}])
             
-            
-            for i in range(facelength):
+            for i in range(len(self._faces)):
                 
                 face = self._faces[i]
-                edgenum = [face[0], face[1], face[2]]
-                edge1, edge2, edge3 = self._edges[edgenum[0]], self._edges[edgenum[1]], self._edges[edgenum[2]]
-                node1num, node2num, node3num = ps.get_nodes(edge1, edge2, edge3)
+
+                for j in range(3):
+                    for k in range(j+1, 3):
+                        node1, node2 = self._nodes[face[j]], self._nodes[face[k]]
+                        midnode = ps.get_middle_point(node1, node2)
+                        self._nodes.append(ps.change_distance(midnode, self._diameter))
+
+                node1num, node2num, node3num = face
                 node1, node2, node3 = self._nodes[node1num], self._nodes[node2num], self._nodes[node3num]
                 
-                node12 = new_nodes[nodelength + edgenum[0]]
-                node13 = new_nodes[nodelength + edgenum[1]]
-                node23 = new_nodes[nodelength + edgenum[2]]
+                newnodenum1 = nodelength + i * 3
+                newnodenum2 = nodelength + i * 3 + 1
+                newnodenum3 = nodelength + i * 3 + 2
 
-                new_edges.append({nodelength + edgenum[0], nodelength + edgenum[1]})
-                new_edges.append({nodelength + edgenum[0], nodelength + edgenum[2]})
-                new_edges.append({nodelength + edgenum[1], nodelength + edgenum[2]})
+                new_faces.append([node1num, newnodenum1, newnodenum2])
+                new_faces.append([node2num, newnodenum1, newnodenum3])
+                new_faces.append([node3num, newnodenum2, newnodenum3])
+                new_faces.append([newnodenum1, newnodenum2, newnodenum3])
 
-                edgecheck = [new_edges[edgenum[0]*2], new_edges[edgenum[0]*2+1]]
-                edgecheck.extend([new_edges[edgenum[1]*2], new_edges[edgenum[1]*2+1]])
-                edgecheck.extend([new_edges[edgenum[2]*2], new_edges[edgenum[2]*2+1]])
-                edgecheck.append(new_edges[2*edgelength+i*3])
-                edgecheck.append(new_edges[2*edgelength+i*3+1])
-                edgecheck.append(new_edges[2*edgelength+i*3+2])
-                
-                for a in range(len(edgecheck)):
-                    for b in range(a+1, len(edgecheck)):
-                        for c in range(b+1, len(edgecheck)):
-                            edge1 = edgecheck[a]
-                            edge2 = edgecheck[b]
-                            edge3 = edgecheck[c]
-                            if ps.check_edges(edge1, edge2, edge3):
-                                if a < 6:
-                                    f = edgenum[(a//2)]*2+(a%2)
-                                else:
-                                    f = 2*edgelength + i*3 + (a - 6)
-                                if b < 6:
-                                    g = edgenum[(b//2)]*2+(b%2)
-                                else:
-                                    g = 2*edgelength + i*3 + (b - 6)
-                                if c < 6:
-                                    h = edgenum[(c//2)]*2+(c%2)
-                                else:
-                                    h = 2*edgelength + i*3 + (c - 6)
-                                
-                                new_faces.append([f, g, h])
-                
-            self._nodes = new_nodes
-            self._edges = new_edges
             self._faces = new_faces
-            
+
+
+
+class EarthAnalog(PlanetaryObject):
+
+    def __init__(self, planet_type, seed, complexity):
+        super().__init__(planet_type, seed, complexity)
+        self.gen_terrain()
+        self.assign_biomes()
+        self.gen_clouds()
 
     def assign_biomes(self):
         
         moisture_noise_hash = hash(random.random())
         
         for face in self._faces:
-            
-            nodes = ps.get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
-            
-            node1, node2, node3 = self._nodes[nodes[0]], self._nodes[nodes[1]], self._nodes[nodes[2]]
-            
+            node1, node2, node3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
             mid = ps.get_middle_point(node1, node2, node3)
 
-            height = math.sqrt(mid[0]**2 + mid[1]**2 + mid[2]**2)
+            height = ps.get_height(mid)
 
             tml = self._planet.get_moisture_levels()
             tel = self._planet.get_elevation_levels()
@@ -287,12 +251,11 @@ class Planet(object):
         cloud_noise_width = self._planet.get_cloud_width()
         cloud_height = self._planet.get_cloud_height()
         for face in self._faces:
-            node1, node2, node3 = ps.get_nodes(self._edges[face[0]], self._edges[face[1]], self._edges[face[2]])
-            n1, n2, n3 = self._nodes[node1], self._nodes[node2], self._nodes[node3]
+            n1, n2, n3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
             middle_node = ps.get_middle_point(n1, n2, n3)
             cloud_noise = ps.perlin(middle_node, cloud_noise_width, 1, cloud_hash)
             if cloud_noise > cloud_cutoff:
-                new_cloud = [node1, node2, node3, cloud_color]
+                new_cloud = face[:-1] + [cloud_color]
                 self._cloud_faces.append(new_cloud)
             
         
@@ -307,13 +270,14 @@ class GifCanvas:
         self._gif_images = []
         self._bodies = {}
         self.gen_base_canvas(100, 1, 1)
+        self.set_lighting([0, 0, 1])
 
     def set_lighting(self, light_vector):
         self._light_vector = light_vector
 
     def gen_base_canvas(self, star_number, star_min_size, star_max_size):
-        self._base_canvas = Image.new("RGBA", self._canvas_size, color=self._background_color)
-        base_canvas_draw = ImageDraw.Draw(self._base_canvas)
+        self._base_canvas = Image.new("RGB", self._canvas_size, color=self._background_color)
+        base_canvas_draw = ImageDraw.Draw(self._base_canvas, 'RGBA')
 
         greenwhite_star = (204, 255, 204, 255)
         blue_star = (153, 204, 255, 255)
@@ -345,26 +309,29 @@ class GifCanvas:
 
     def draw_image(self):
         self._canvas = self._base_canvas.copy()
-        canvas_draw = ImageDraw.Draw(self._canvas)
+        canvas_draw = ImageDraw.Draw(self._canvas, 'RGBA')
 
         draw_faces = []
+        
         for body, position in self._bodies.items():
-            
             for face in body._faces:
-                n1num, n2num, n3num = ps.get_nodes(body._edges[face[0]], body._edges[face[1]], body._edges[face[2]])
-                n1 = body._nodes[n1num]
-                n2 = body._nodes[n2num]
-                n3 = body._nodes[n3num]
-                
+                n1, n2, n3 = body._nodes[face[0]], body._nodes[face[1]], body._nodes[face[2]]
                 mid = ps.get_middle_point(n1, n2, n3)
                 zcoord = mid[2]
-                
                 color = ps.lighting(n1, n2, n3, face[3], self._light_vector)
-                
-                if self._bodies.get(position[0], None) != None:
-                    draw_faces.append((zcoord+position[1][2], n1, n2, n3, color, position[1][:2]))
-                else:
-                    draw_faces.append((zcoord, n1, n2, n3, color, position))
+                draw_faces.append((zcoord, n1, n2, n3, color, position))
+
+            for face in body._cloud_faces:
+                n1, n2, n3, color = body._nodes[face[0]], body._nodes[face[1]], body._nodes[face[2]], face[3]
+                cloud_height = body._planet.get_cloud_height()
+                n1 = ps.change_distance(n1, 2*cloud_height)
+                n2 = ps.change_distance(n2, 2*cloud_height)
+                n3 = ps.change_distance(n3, 2*cloud_height)
+                mid = ps.get_middle_point(n1, n2, n3)
+                zcoord = mid[2]
+                color = ps.lighting(n1, n2, n3, color, self._light_vector)
+                draw_faces.append((zcoord, n1, n2, n3, color, position))
+
 
             draw_faces = sorted(draw_faces)
             
@@ -372,34 +339,6 @@ class GifCanvas:
                 xc, yc = face[5]
                 fillcolor = face[4]
                 canvas_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
-
-            draw_faces = []
-
-            for face in body._cloud_faces:
-                n1, n2, n3, color = body._nodes[face[0]], body._nodes[face[1]], body._nodes[face[2]], face[3]
-                cloud_height = body._planet.get_cloud_height()
-                newn1 = ps.change_distance(n1, 2*cloud_height)
-                newn2 = ps.change_distance(n2, 2*cloud_height)
-                newn3 = ps.change_distance(n3, 2*cloud_height)
-                mid = ps.get_middle_point(newn1, newn2, newn3)
-                zcoord = mid[2]
-                color = ps.lighting(n1, n2, n3, color, self._light_vector)
-                
-                if self._bodies.get(position[0], None) != None:
-                    draw_faces.append((zcoord+position[1][2], newn1, newn2, newn3, color, position[1][:2]))
-                else:
-                    draw_faces.append((zcoord, newn1, newn2, newn3, color, position))
-
-            draw_faces = sorted(draw_faces)
-
-            temp_image = Image.new("RGBA", self._canvas_size, color=0)
-            temp_draw = ImageDraw.Draw(temp_image)
-            for face in draw_faces:
-                if face[0] > 0:
-                    xc, yc = face[5]
-                    fillcolor = face[4]
-                    temp_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
-            self._canvas = Image.alpha_composite(self._canvas, temp_image)
 
         return self._canvas
 
@@ -416,15 +355,9 @@ class GifCanvas:
         
     def make_gif(self, fps=60, filepath='movie.gif'):
         self._gif_images = []
-        for i in range(385):
+        for i in range(180):
             for body, position in self._bodies.items():
-                body.rotate('x', 0.25)
-                body.rotate('y', 0.75)
-                body.rotate('z', 0.5)
-                if self._bodies.get(position[0], None) != None:
-                    position_node = position[1]
-                    new_position = ps.rotate_node(position_node, 'y', 360/385, list(self._bodies[position[0]]) + [0])
-                    position[1] = new_position
+                body.spin(2)
                 image = self.draw_image()
                 image = np.asarray(image)
                 self._gif_images.append(image)
@@ -438,8 +371,6 @@ class GifCanvas:
             imageio.mimsave(filepath, self._gif_images, fps=fps)
             print('Gif saved!')
 
-    
-
 
 def main():
 
@@ -450,7 +381,7 @@ def main():
 
     seed = str(input('Please enter a seed: '))
     complexity = int(input('Please enter a complexity: '))
-    planet = Planet(planet_type, seed, complexity)
+    planet = EarthAnalog(planet_type, seed, complexity)
     
     gifcanvas = GifCanvas(canvas_size, background_color)
     gifcanvas.add_body(planet, 'centre')

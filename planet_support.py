@@ -5,33 +5,14 @@ import numpy as np
 def change_distance(node, diameter, distance_multiplier=None):
     newnode = [0, 0, 0]
     if distance_multiplier == None:
-        distance_multiplier = 0.5 * diameter/(math.sqrt(node[0]**2 + node[1]**2 + node[2]**2))
+        distance_multiplier = 0.5 * diameter/get_height(node)
     newnode[0] = node[0]*distance_multiplier
     newnode[1] = node[1]*distance_multiplier
     newnode[2] = node[2]*distance_multiplier
     return newnode
 
-def rotate_node(node, dimension, degrees, origin):
-    cosTheta = math.cos(math.radians(degrees))
-    sinTheta = math.sin(math.radians(degrees))
-    node = [node[0]-origin[0], node[1]-origin[1], node[2]-origin[2]]
-    if dimension in ['x', 'X']:
-        y = node[1]
-        z = node[2]
-        node[1] = cosTheta * y - sinTheta * z
-        node[2] = sinTheta * y + cosTheta * z
-    elif dimension in ['y', 'Y']:
-        x = node[0]
-        z = node[2]
-        node[0] = cosTheta * x - sinTheta * z
-        node[2] = sinTheta * x + cosTheta * z
-    elif dimension in ['z', 'Z']:
-        x = node[0]
-        y = node[1]
-        node[0] = cosTheta * x - sinTheta * y
-        node[1] = sinTheta * x + cosTheta * y
-
-    return [node[0] + origin[0], node[1] + origin[1], node[2] + origin[2]]
+def get_height(node):
+    return math.sqrt(node[0]**2 + node[1]**2 + node[2]**2)
 
 def get_middle_point(point1, point2, point3=None):
     if point3==None:
@@ -47,18 +28,7 @@ def get_middle_point(point1, point2, point3=None):
 
     return newnode
 
-def get_nodes(edge1, edge2, edge3):
-    nodeset = set()
-    for nodenum in edge1.union(edge2.union(edge3)):
-        nodeset.add(nodenum)
-    return list(nodeset)
-
-def check_edges(edge1, edge2, edge3):
-    if len(get_nodes(edge1, edge2, edge3)) == 3:
-        if edge1 != edge2 and edge2 != edge3 and edge1 != edge3:
-            return True
-    return False
-
+##Perlin noise
 def lerp(a0, a1, w):
     return (1 - w)*a0 + w*a1
  
@@ -116,6 +86,7 @@ def perlin(node, period, amplitude, random_hash):
     value = lerp(ix4, ix5, sz)
 
     return 0.5*amplitude*(value + 1)
+##end of perlin noise
 
 
 def perspective(node, origin):
@@ -132,12 +103,17 @@ def crossproduct(node1, node2, node3):
     newx = vectory0*vectorz1 - vectorz0*vectory1
     newy = vectorz0*vectorx1 - vectorx0*vectorz1
     newz = vectorx0*vectory1 - vectory0*vectorx1
-    length = math.sqrt(newx**2 + newy**2 + newz**2)
+    length = get_height([newx, newy, newz])
     newx = newx/length
     newy = newy/length
     newz = newz/length
+
+    if length == 0:
+        print(node1)
+        print(node2)
+        print(node3)
     
-    vector_magnitude = math.sqrt((x0+newx)**2 + (y0 + newy)**2 + (z0+newz)**2)
+    vector_magnitude = get_height([x0+newx, y0+newy, z0+newz])
     if magnitude(node1) > vector_magnitude:
         newx = -newx
         newy = -newy
