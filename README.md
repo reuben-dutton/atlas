@@ -12,7 +12,7 @@ I must give credit to the following sources for their explanation and implementa
  - [Procedural Planet Generation](http://experilous.com/1/blog/post/procedural-planet-generation) by Andy Gainey
 at [Experilous.com](http://experilous.com/)
 
-I'd also like give credit to [Red Blob Games](http://www.redblobgames.com/) again for **[their adaptation](http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/#biomes)** of the [Whittaker diagram](http://w3.marietta.edu/~biol/biomes/biome_main.htm), which I used for the biome colourings on the script's earth-like planets.
+I'd also like give credit to [Red Blob Games](http://www.redblobgames.com/) again for **[their adaptation](http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/#biomes)** of the [Whittaker diagram](http://w3.marietta.edu/~biol/biomes/biome_main.htm), which I used for the biome colourings on the script's earth analog planets.
 
 
 ## Currently Implemented
