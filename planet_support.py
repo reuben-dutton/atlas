@@ -2,10 +2,9 @@ import random, math
 import numpy as np
 
 
-def change_distance(node, diameter, distance_multiplier=None):
+def change_distance(node, distance):
     newnode = [0, 0, 0]
-    if distance_multiplier == None:
-        distance_multiplier = 0.5 * diameter/get_height(node)
+    distance_multiplier = distance/get_height(node)
     newnode[0] = node[0]*distance_multiplier
     newnode[1] = node[1]*distance_multiplier
     newnode[2] = node[2]*distance_multiplier
@@ -14,19 +13,12 @@ def change_distance(node, diameter, distance_multiplier=None):
 def get_height(node):
     return math.sqrt(node[0]**2 + node[1]**2 + node[2]**2)
 
-def get_middle_point(point1, point2, point3=None):
-    if point3==None:
-        newx = (point1[0] + point2[0]) / 2
-        newy = (point1[1] + point2[1]) / 2
-        newz = (point1[2] + point2[2]) / 2
-        newnode = [newx, newy, newz]
-    else:
-        newx = (point1[0] + point2[0] + point3[0]) / 3
-        newy = (point1[1] + point2[1] + point3[1]) / 3
-        newz = (point1[2] + point2[2] + point3[2]) / 3
-        newnode = [newx, newy, newz]
+def get_middle_point(point1, point2, point3):
+    newx = (point1[0] + point2[0] + point3[0]) / 3
+    newy = (point1[1] + point2[1] + point3[1]) / 3
+    newz = (point1[2] + point2[2] + point3[2]) / 3
+    return [newx, newy, newz]
 
-    return newnode
 
 ##Perlin noise
 def lerp(a0, a1, w):
@@ -49,7 +41,7 @@ def dotGridGradient(ix, iy, iz, x, y, z, random_hash):
 
     return (dz*randz + dx*randy + dy*randx)
 
-def perlin(node, period, amplitude, random_hash):
+def perlin(node, period, amplitude, random_hash, normalise=True):
 
     x = node[0]/period
     y = node[1]/period
@@ -85,6 +77,13 @@ def perlin(node, period, amplitude, random_hash):
 
     value = lerp(ix4, ix5, sz)
 
+    if normalise:
+        standard_devs = value / 0.2
+        sd = standard_devs
+
+        cmdf = 0.5* math.tanh(179*sd/23 - 111/2*math.atan(37*sd/294)) + 0.5
+        return amplitude*cmdf
+
     return 0.5*amplitude*(value + 1)
 ##end of perlin noise
 
@@ -107,11 +106,6 @@ def crossproduct(node1, node2, node3):
     newx = newx/length
     newy = newy/length
     newz = newz/length
-
-    if length == 0:
-        print(node1)
-        print(node2)
-        print(node3)
     
     vector_magnitude = get_height([x0+newx, y0+newy, z0+newz])
     if magnitude(node1) > vector_magnitude:
@@ -137,8 +131,7 @@ def lighting(node1, node2, node3, color, light):
     angleratio = 2*angleratio**2 - (4/3)*angleratio**3 + (1/3)*angleratio
     #smoothing function
     r, g, b = r*angleratio, g*angleratio, b*angleratio
-    adj_color = (int(r), int(g), int(b), a)
-    return adj_color
+    return (int(r), int(g), int(b), a)
         
         
         

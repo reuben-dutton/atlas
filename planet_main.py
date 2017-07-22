@@ -6,16 +6,38 @@ import time, datetime
 import planet_support as ps
 import planet_types as pt
 
-class PlanetaryObject(object):
+class PlanetObject(object):
+    '''Planet is an object representing the basic concept of being a sphere with basic methods for:
+        - Defining the rotational axis
+        - Spinning the planet based on the given speed and using the rotational axis
+        - Defining the base nodes for the planet
+        - Defining the base faces for the planet
+        - Increasing the complexity of the planet (subdividing the faces)
+        - Generating biomes
+        - Generating terrain
+        - Generating clouds (if applicable for that planet type)
 
-    def __init__(self, planet_type, seed, complexity):
-        self._planet = planet_type
+    '''
+
+    def __init__(self, planet, complexity):
+        ''' Initializes the planet
+
+            Parameters:
+                planet_type (PlanetType) : The information class holding the planet's characteristic info
+                complexity (int) : An int representing how smooth the planet should be
+
+            Returns None
+        '''
+        self._planet = planet
         self._diameter = self._planet.get_diameter()
+        self._radius = self._diameter * 0.5
         self.define_base_nodes()
         self.define_base_faces()
         self.complexify(complexity)
-        random.seed(seed)
-        self.define_rotation()
+        self.define_rotation() 
+        self.gen_terrain()
+        self.assign_biomes()
+        self.gen_clouds()
 
 
     def define_rotation(self):
@@ -54,9 +76,14 @@ class PlanetaryObject(object):
             node[0] = cosTheta1 * x + sinTheta1 * z
             node[2] = -sinTheta1 * x + cosTheta1 * z
 
-
-            
-        
+    def temp_rotate(self, speed):
+        cosTheta3 = math.cos(math.radians(speed*self._axis_spin))
+        sinTheta3 = math.sin(math.radians(speed*self._axis_spin))
+        for node in self._nodes:
+            x = node[0]
+            z = node[2]
+            node[0] = cosTheta3 * x - sinTheta3 * z
+            node[2] = sinTheta3 * x + cosTheta3 * z
 
     def set_axis(self):
         cosTheta = math.cos(math.radians(self._axis_elevation_angle))
@@ -78,18 +105,18 @@ class PlanetaryObject(object):
         a = d / math.sqrt(11 + 2*math.sqrt(5))
         phi = a * (1 + math.sqrt(5))/2
         self._nodes = []
-        self._nodes.append(ps.change_distance([0, -a, -phi], self._diameter))
-        self._nodes.append(ps.change_distance([0, -a, phi], self._diameter))
-        self._nodes.append(ps.change_distance([0, a, -phi], self._diameter))
-        self._nodes.append(ps.change_distance([0, a, phi], self._diameter))
-        self._nodes.append(ps.change_distance([-a, -phi, 0], self._diameter))
-        self._nodes.append(ps.change_distance([-a, phi, 0], self._diameter))
-        self._nodes.append(ps.change_distance([a, -phi, 0], self._diameter))
-        self._nodes.append(ps.change_distance([a, phi, 0], self._diameter))
-        self._nodes.append(ps.change_distance([-phi, 0, -a], self._diameter))
-        self._nodes.append(ps.change_distance([phi, 0, -a], self._diameter))
-        self._nodes.append(ps.change_distance([-phi, 0, a], self._diameter))
-        self._nodes.append(ps.change_distance([phi, 0, a], self._diameter))
+        self._nodes.append(ps.change_distance([0, -a, -phi], self._radius))
+        self._nodes.append(ps.change_distance([0, -a, phi], self._radius))
+        self._nodes.append(ps.change_distance([0, a, -phi], self._radius))
+        self._nodes.append(ps.change_distance([0, a, phi], self._radius))
+        self._nodes.append(ps.change_distance([-a, -phi, 0], self._radius))
+        self._nodes.append(ps.change_distance([-a, phi, 0], self._radius))
+        self._nodes.append(ps.change_distance([a, -phi, 0], self._radius))
+        self._nodes.append(ps.change_distance([a, phi, 0], self._radius))
+        self._nodes.append(ps.change_distance([-phi, 0, -a], self._radius))
+        self._nodes.append(ps.change_distance([phi, 0, -a], self._radius))
+        self._nodes.append(ps.change_distance([-phi, 0, a], self._radius))
+        self._nodes.append(ps.change_distance([phi, 0, a], self._radius))
 
     def define_base_faces(self):
         self._faces = []
@@ -128,8 +155,8 @@ class PlanetaryObject(object):
                 for j in range(3):
                     for k in range(j+1, 3):
                         node1, node2 = self._nodes[face[j]], self._nodes[face[k]]
-                        midnode = ps.get_middle_point(node1, node2)
-                        self._nodes.append(ps.change_distance(midnode, self._diameter))
+                        midnode = (node1[0]/2+node2[0]/2, node1[1]/2+node2[1]/2, node1[2]/2+node2[2]/2)
+                        self._nodes.append(ps.change_distance(midnode, self._radius))
 
                 node1num, node2num, node3num = face
                 node1, node2, node3 = self._nodes[node1num], self._nodes[node2num], self._nodes[node3num]
@@ -144,20 +171,9 @@ class PlanetaryObject(object):
                 new_faces.append([newnodenum1, newnodenum2, newnodenum3])
 
             self._faces = new_faces
-
-
-
-class EarthAnalog(PlanetaryObject):
-
-    def __init__(self, planet_type, seed, complexity):
-        super().__init__(planet_type, seed, complexity)
-        self.gen_terrain()
-        self.assign_biomes()
-        self.gen_clouds()
+            
 
     def assign_biomes(self):
-        
-        moisture_noise_hash = hash(random.random())
         
         for face in self._faces:
             node1, node2, node3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
@@ -165,22 +181,13 @@ class EarthAnalog(PlanetaryObject):
 
             height = ps.get_height(mid)
 
-            tml = self._planet.get_moisture_levels()
-            tel = self._planet.get_elevation_levels()
-            mw = self._planet.get_moisture_width()
+            elevation_levels = self._planet.get_elevation_levels()
 
             min_height = self._planet.get_min_height()
             height_range = self._planet.get_height_range()
             
-            moisture_level = ps.perlin(mid, mw, tml, moisture_noise_hash)
-            
-            if moisture_level > 0.55*tml:
-                moisture_level = moisture_level*(2 - moisture_level/tml)
-            elif moisture_level < 0.45*tml:
-                moisture_level = tml - (tml-moisture_level)*(1 + moisture_level/tml)
-                
-            moisture_level = math.ceil(moisture_level)
-            elevation_level = math.ceil(tel*(height-min_height)/height_range)
+            moisture_level = math.ceil(self._planet.get_moisture_noise(mid))
+            elevation_level = math.ceil(elevation_levels*(height-min_height)/height_range)
             
             biome_color = self._planet.get_biome_color(elevation_level, moisture_level)
             
@@ -189,77 +196,46 @@ class EarthAnalog(PlanetaryObject):
 
     def gen_terrain(self):
 
-        terrain_large_noise_hash = hash(random.random())
-        terrain_med_noise_hash = hash(random.random())
-        terrain_small_noise_hash = hash(random.random())
-
         nodes_length = len(self._nodes)
         
         largenoisewidth, mednoisewidth, smallnoisewidth = self._planet.get_terrain_width()
-        lnd, mnd, snd = self._planet.get_terrain_noise()
 
-        amplitude = self._planet.get_terrain_amplitude()
+        island_array = []
+        if self._planet.get_islands_boolean():
+            max_island_number, min_island_number = self._planet.get_island_number_range()
+            max_island_size, min_island_size = self._planet.get_island_size_range()
         
-        max_height = self._planet.get_max_height()
-        min_height = self._planet.get_min_height()
-        height_range = self._planet.get_height_range()
-
-        max_island_number, min_island_number = self._planet.get_island_number_range()
-        max_island_size, min_island_size = self._planet.get_island_size_range()
-        
-        island_total = random.randrange(min_island_number, max_island_number + 1)
-        rmarray = []
-        for i in range(island_total):
-            island_size = random.random()*(max_island_size - min_island_size) + min_island_size
-            rmarray.append([self._nodes[random.randrange(nodes_length)], island_size])
+            island_total = random.randrange(min_island_number, max_island_number + 1)
+            for i in range(island_total):
+                island_size = random.random()*(max_island_size - min_island_size) + min_island_size
+                island_array.append([self._nodes[random.randrange(nodes_length)], island_size])
         
         new_nodes = []
         for node in self._nodes:
-
-            min_dist_ratio = 0
-
-            for rm in rmarray:
-                island_size = rm[1]
-                dist_from_mountain = math.sqrt((node[0]-rm[0][0])**2 + (node[1]-rm[0][1])**2 + (node[2]-rm[0][2])**2)
-                dist_ratio = 1 - dist_from_mountain/island_size
-                if dist_ratio > min_dist_ratio:
-                    min_dist_ratio = dist_ratio
-
             
+            noise = self._planet.get_terrain_noise(node, island_array)
+            if noise < 0:
+                noise = 0
+            multiplier = 1 + noise
 
-            large_noise = ps.perlin(node, largenoisewidth, amplitude, terrain_large_noise_hash)
-            med_noise = ps.perlin(node, mednoisewidth, amplitude, terrain_med_noise_hash)
-            small_noise = ps.perlin(node, smallnoisewidth, amplitude, terrain_small_noise_hash)
-
-            noise = (lnd*large_noise + mnd*med_noise + snd*small_noise)
-            actual_noise = noise - amplitude*(lnd + mnd + snd)*(1-min_dist_ratio)
-            if actual_noise < 0:
-                actual_noise = 0
-            multiplier = 1 + actual_noise
-
-            new_nodes.append(ps.change_distance(node, self._diameter, multiplier))
+            new_nodes.append(ps.change_distance(node, self._radius*multiplier))
                 
         self._nodes = new_nodes
 
     def gen_clouds(self):
-        cloud_color = self._planet.get_cloud_color()
         self._cloud_faces = []
-        if cloud_color == None:
-            pass
-        cloud_hash = hash(random.random())
-        cloud_cutoff = self._planet.get_cloud_cutoff()
-        cloud_noise_width = self._planet.get_cloud_width()
-        cloud_height = self._planet.get_cloud_height()
-        for face in self._faces:
-            n1, n2, n3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
-            middle_node = ps.get_middle_point(n1, n2, n3)
-            cloud_noise = ps.perlin(middle_node, cloud_noise_width, 1, cloud_hash)
-            if cloud_noise > cloud_cutoff:
-                new_cloud = face[:-1] + [cloud_color]
-                self._cloud_faces.append(new_cloud)
-            
-        
-
+        if self._planet.get_clouds_boolean():
+            cloud_color = self._planet.get_cloud_color()
+            cloud_cutoff = self._planet.get_cloud_cutoff()
+            cloud_noise_width = self._planet.get_cloud_width()
+            for face in self._faces:
+                n1, n2, n3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
+                middle_node = ps.get_middle_point(n1, n2, n3)
+                cloud_noise = self._planet.get_cloud_noise(middle_node)
+                if cloud_noise > cloud_cutoff:
+                    new_cloud = face[:-1] + [cloud_color]
+                    self._cloud_faces.append(new_cloud)
+    
 
 class GifCanvas:
 
@@ -320,25 +296,30 @@ class GifCanvas:
                 zcoord = mid[2]
                 color = ps.lighting(n1, n2, n3, face[3], self._light_vector)
                 draw_faces.append((zcoord, n1, n2, n3, color, position))
-
+            #level 5 takes 0.7 seconds
+            #so about 65% of rendering time
+            #lighting takes up ~70% of this time
             for face in body._cloud_faces:
                 n1, n2, n3, color = body._nodes[face[0]], body._nodes[face[1]], body._nodes[face[2]], face[3]
                 cloud_height = body._planet.get_cloud_height()
-                n1 = ps.change_distance(n1, 2*cloud_height)
-                n2 = ps.change_distance(n2, 2*cloud_height)
-                n3 = ps.change_distance(n3, 2*cloud_height)
+                n1 = ps.change_distance(n1, cloud_height)
+                n2 = ps.change_distance(n2, cloud_height)
+                n3 = ps.change_distance(n3, cloud_height)
                 mid = ps.get_middle_point(n1, n2, n3)
                 zcoord = mid[2]
                 color = ps.lighting(n1, n2, n3, color, self._light_vector)
                 draw_faces.append((zcoord, n1, n2, n3, color, position))
-
-
+            #level 5 takes 0.03 seconds
+            #so about 3% of rendering time
             draw_faces = sorted(draw_faces)
-            
+            #level 5 takes 0.05 seconds
+            #so about 5% of rendering time
             for face in draw_faces:
                 xc, yc = face[5]
                 fillcolor = face[4]
                 canvas_draw.polygon([(face[1][0]+xc, face[1][1]+yc),(face[2][0]+xc, face[2][1]+yc),(face[3][0]+xc, face[3][1]+yc)], fill=fillcolor)
+            #level 5 takes 0.3 seconds
+            #so about 28% of rendering time
 
         return self._canvas
 
@@ -355,9 +336,10 @@ class GifCanvas:
         
     def make_gif(self, fps=60, filepath='movie.gif'):
         self._gif_images = []
-        for i in range(180):
+        for i in range(360):
             for body, position in self._bodies.items():
-                body.spin(2)
+                #body.spin(2) Removed until I find a more optimised version because it takes fucking forever to spin this shit
+                body.temp_rotate(1)
                 image = self.draw_image()
                 image = np.asarray(image)
                 self._gif_images.append(image)
@@ -377,14 +359,13 @@ def main():
     background_color = (0, 0, 0, 255)
     canvas_size = (750, 750)
 
-    planet_type = pt.TerrestrialOceans(450)
-
     seed = str(input('Please enter a seed: '))
     complexity = int(input('Please enter a complexity: '))
-    planet = EarthAnalog(planet_type, seed, complexity)
+    planet = pt.EarthAnalog(450, seed)
+    thing = PlanetObject(planet, complexity)
     
     gifcanvas = GifCanvas(canvas_size, background_color)
-    gifcanvas.add_body(planet, 'centre')
+    gifcanvas.add_body(thing, 'centre')
     light_vector = [0, 0, 1]
     gifcanvas.set_lighting(light_vector)
     gifcanvas.make_gif()
