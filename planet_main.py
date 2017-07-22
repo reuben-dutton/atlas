@@ -24,13 +24,11 @@ class PlanetObject(object):
 
             Parameters:
                 planet_type (PlanetType) : The information class holding the planet's characteristic info
-                complexity (int) : An int representing how smooth the planet should be
-
-            Returns None
+                complexity (int) : An int representing how smooth/complex the planet should be.
+                
         '''
         self._planet = planet
-        self._diameter = self._planet.get_diameter()
-        self._radius = self._diameter * 0.5
+        self._radius = self._planet.get_diameter() * 0.5
         self.define_base_nodes()
         self.define_base_faces()
         self.complexify(complexity)
@@ -101,8 +99,7 @@ class PlanetObject(object):
             node[2] = sinTheta2 * x + cosTheta2 * z
 
     def define_base_nodes(self):
-        d = self._diameter
-        a = d / math.sqrt(11 + 2*math.sqrt(5))
+        a = 1 / math.sqrt(11 + 2*math.sqrt(5))
         phi = a * (1 + math.sqrt(5))/2
         self._nodes = []
         self._nodes.append(ps.change_distance([0, -a, -phi], self._radius))
@@ -179,62 +176,34 @@ class PlanetObject(object):
             node1, node2, node3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
             mid = ps.get_middle_point(node1, node2, node3)
 
-            height = ps.get_height(mid)
-
-            elevation_levels = self._planet.get_elevation_levels()
-
-            min_height = self._planet.get_min_height()
-            height_range = self._planet.get_height_range()
-            
-            moisture_level = math.ceil(self._planet.get_moisture_noise(mid))
-            elevation_level = math.ceil(elevation_levels*(height-min_height)/height_range)
-            
-            biome_color = self._planet.get_biome_color(elevation_level, moisture_level)
+            biome_color = self._planet.get_biome(mid)
             
             face.append(biome_color)
         
 
     def gen_terrain(self):
-
-        nodes_length = len(self._nodes)
         
-        largenoisewidth, mednoisewidth, smallnoisewidth = self._planet.get_terrain_width()
-
-        island_array = []
-        if self._planet.get_islands_boolean():
-            max_island_number, min_island_number = self._planet.get_island_number_range()
-            max_island_size, min_island_size = self._planet.get_island_size_range()
-        
-            island_total = random.randrange(min_island_number, max_island_number + 1)
-            for i in range(island_total):
-                island_size = random.random()*(max_island_size - min_island_size) + min_island_size
-                island_array.append([self._nodes[random.randrange(nodes_length)], island_size])
-        
+        island_array = self._planet.get_islands(self._nodes)
         new_nodes = []
         for node in self._nodes:
             
             noise = self._planet.get_terrain_noise(node, island_array)
-            if noise < 0:
-                noise = 0
             multiplier = 1 + noise
 
             new_nodes.append(ps.change_distance(node, self._radius*multiplier))
-                
+            
         self._nodes = new_nodes
+        
 
     def gen_clouds(self):
         self._cloud_faces = []
-        if self._planet.get_clouds_boolean():
+        for face in self._faces:
+            n1, n2, n3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
+            mid = ps.get_middle_point(n1, n2, n3)
             cloud_color = self._planet.get_cloud_color()
-            cloud_cutoff = self._planet.get_cloud_cutoff()
-            cloud_noise_width = self._planet.get_cloud_width()
-            for face in self._faces:
-                n1, n2, n3 = self._nodes[face[0]], self._nodes[face[1]], self._nodes[face[2]]
-                middle_node = ps.get_middle_point(n1, n2, n3)
-                cloud_noise = self._planet.get_cloud_noise(middle_node)
-                if cloud_noise > cloud_cutoff:
-                    new_cloud = face[:-1] + [cloud_color]
-                    self._cloud_faces.append(new_cloud)
+            if self._planet.is_cloud(mid):
+                new_cloud = face[:-1] + [cloud_color]
+                self._cloud_faces.append(new_cloud)
     
 
 class GifCanvas:

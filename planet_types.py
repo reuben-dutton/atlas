@@ -2,12 +2,50 @@ import planet_support as ps
 import random, math
 
 class BodySetting(object):
+    ''' Abstract class containing all the values that a planet requires.
+        This includes random hashes which are used to generate:
+            - Moisture
+                ~ (mh)
+            - Terrain elevation
+                ~ (tlh, tmh, tsh)
+            - Clouds (optional)
+                ~ (ch)
+                
+        Also, it includes other random values such as:
+            - Seed (The seed generating the planet)
+                ~ (seed)
+            - Diameter
+                ~ (diameter)
+            - Values dictating how terrain is generated
+                ~ (large_noise_weight, medium_noise_weight, small_noise_weight)
+                ~ (large_noise_width, medium_noise_width, small_noise_width)
+                ~ (amplitude)
+                ~ (max_height, min_height)
+            - Values dictating how moisture is generated
+                ~ (moisture_noise_width)
+            - Values dictating how biomes are decided
+                ~ (total_moisture_levels, total_elevation_levels)
+                ~ (biome_dictionary)
 
+        Further, planet-specific values are detailed in the comments under
+        their respective class.
+    '''
     def __init__(self, diameter, seed):
-        self._diameter = diameter
+        ''' Initializes the BodySetting class
 
-    def set_hashes(self, seed):
-        random.seed(seed)
+            Parameters:
+                diameter (int) : The diameter (size) of the planet
+                seed (str) : The string used to seed the planet's generation
+
+        '''
+        self._diameter = diameter
+        self._seed = seed
+
+    def set_hashes(self):
+        ''' Sets the hashes that are used for random generation of terrain,
+            moisture and clouds if applicable.
+        '''
+        random.seed(self._seed)
         self._mh = hash(random.random())
         #moisture hash
         self._tlh = hash(random.random())
@@ -26,69 +64,12 @@ class BodySetting(object):
     def get_biome_color(self, elevation, moisture):
         return self._biome_dict[self._biome_assignments.get((elevation, moisture), self._biome_other)]
 
-    def get_terrain_noise_weight(self):
-        return (self._large_noise_weight, self._medium_noise_weight, self._small_noise_weight)
-
-    def get_moisture_width(self):
-        return self._moisture_noise_width
-
-    def get_terrain_amplitude(self):
-        return self._amplitude
-
-    def get_terrain_width(self):
-        return (self._large_noise_width, self._medium_noise_width, self._small_noise_width)
-
-    def get_max_height(self):
-        return self._max_height
-
-    def get_min_height(self):
-        return self._min_height
-
-    def get_height_range(self):
-        return self._height_range
-
-    def get_moisture_levels(self):
-        return self._total_moisture_levels
-
-    def get_elevation_levels(self):
-        return self._total_elevation_levels
-
-    def get_islands_boolean(self):
-        return self._islands_boolean
-
-    def get_island_number_range(self):
-        if self._islands_boolean:
-            return (self._max_island_number, self._min_island_number)
-
-    def get_island_size_range(self):
-        if self._islands_boolean:
-            return (self._max_island_size, self._min_island_size)
-
-    def get_clouds_boolean(self):
-        return self._clouds_boolean
-
-    def get_cloud_color(self):
-        if self._clouds_boolean:
-            return self._cloud_color
-
-    def get_cloud_height(self):
-        if self._clouds_boolean:
-            return self._cloud_height
-
-    def get_cloud_width(self):
-        if self._clouds_boolean:
-            return self._cloud_noise_width
-
-    def get_cloud_cutoff(self):
-        if self._clouds_boolean:
-            return self._cloud_noise_cutoff
-
     def get_terrain_noise(self, node, island_array):
         large_noise = ps.perlin(node, self._large_noise_width, self._amplitude, self._tlh)
         med_noise = ps.perlin(node, self._medium_noise_width, self._amplitude, self._tmh)
         small_noise = ps.perlin(node, self._small_noise_width, self._amplitude, self._tsh)
         
-        lnd, mnd, snd = self.get_terrain_noise_weight()
+        lnd, mnd, snd = self._large_noise_weight, self._medium_noise_weight, self._small_noise_weight
         noise = (lnd*large_noise + mnd*med_noise + snd*small_noise)
 
         if self._islands_boolean:
@@ -106,18 +87,59 @@ class BodySetting(object):
         noise = ps.perlin(node, self._moisture_noise_width, self._total_moisture_levels, self._mh)
         return noise
 
+    def get_biome(self, node):
+        height = ps.get_height(node)
+        
+        moisture_level = math.ceil(self.get_moisture_noise(node))
+        elevation_level = math.ceil(self._total_elevation_levels*(height-self._min_height)/self._height_range)
+        
+        return self.get_biome_color(elevation_level, moisture_level)
+
+    def get_islands(self, nodes):
+        island_array = []
+        if self._islands_boolean:
+            island_total = random.randrange(self._min_island_number, self._max_island_number + 1)
+            for i in range(island_total):
+                island_size = random.random()*(self._max_island_size - self._min_island_size) + self._min_island_size
+                island_array.append([nodes[random.randrange(len(nodes))], island_size])
+        return island_array
+
+    def is_cloud(self, node):
+        if self._clouds_boolean:
+            cloud_noise = self.get_cloud_noise(node)
+            return (cloud_noise > self._cloud_noise_cutoff)
+        return False
+
     def get_cloud_noise(self, node):
         if self._clouds_boolean:
             noise = ps.perlin(node, self._cloud_noise_width, 1, self._ch)
             return noise
+
+    def get_cloud_color(self):
+        if self._clouds_boolean:
+            return self._cloud_color
+
+    def get_cloud_height(self):
+        if self._clouds_boolean:
+            return self._cloud_height
         
 
 class PlanetSetting(BodySetting):
 
     def __init__(self, diameter, seed):
         super().__init__(diameter, seed)
+        
 
-        self._planet_type = 'PLANET'
+class TerrestrialPlanet(PlanetSetting):
+
+    def __init__(self, diameter, seed):
+        super().__init__(diameter, seed)
+        
+
+class GasPlanet(PlanetSetting):
+
+    def __init__(self, diameter, seed):
+        super().__init__(diameter, seed)
 
 
 class MoonSetting(BodySetting):
@@ -128,28 +150,17 @@ class MoonSetting(BodySetting):
 
     def get_orbiting_body(self):
         return self._orbiting_body
-    
 
-class TerrestrialPlanet(PlanetSetting):
-
-
-    def __init__(self, diameter, seed):
-        super().__init__(diameter, seed)
         
-        self._planet_type = 'TERRESTRIAL PLANET'
 
-        self._clouds_boolean = False
-        self._islands_boolean = False
+''' The following classes are different planet types. EarthAnalog is given as an example
+    to show exactly what is needed for a terrestrial planet, and GasGiant is given as
+    an example of a gas planet. ClassicMoon is also commented as an example of a moon.
+'''
 
-
-class GasPlanet(PlanetSetting):
-
-    def __init__(self, diameter, seed):
-
-        super().__init__(diameter, seed)
-
-        self._planet_type = 'GAS PLANET'
-        
+##
+## TERRESTRIAL PLANETS
+##
 
 class IronPlanet(TerrestrialPlanet):
 
@@ -203,7 +214,21 @@ class IronPlanet(TerrestrialPlanet):
         self._biome_assignments[(1, 1)] = 'SOOT'
         self._biome_other = 'BASE TERRAIN'
 
-        self.set_hashes(seed)
+        #Clouds
+        self._clouds_boolean = False
+        self._cloud_color = None
+        self._cloud_height = None
+        self._cloud_noise_width = None
+        self._cloud_noise_cutoff = None
+
+        #Islands
+        self._islands_boolean = False
+        self._max_island_number = None
+        self._min_island_number = None
+        self._max_island_size = None
+        self._min_island_size = None
+
+        self.set_hashes()
 
 class IcePlanet(TerrestrialPlanet):
 
@@ -257,7 +282,21 @@ class IcePlanet(TerrestrialPlanet):
         self._biome_assignments[(1, 1)] = 'MEDIUM BLUEISH ICE'
         self._biome_other = 'BASE TERRAIN'
 
-        self.set_hashes(seed)
+        #Clouds
+        self._clouds_boolean = False
+        self._cloud_color = None
+        self._cloud_height = None
+        self._cloud_noise_width = None
+        self._cloud_noise_cutoff = None
+
+        #Islands
+        self._islands_boolean = False
+        self._max_island_number = None
+        self._min_island_number = None
+        self._max_island_size = None
+        self._min_island_size = None
+
+        self.set_hashes()
 
 
 class EarthAnalog(TerrestrialPlanet):
@@ -345,8 +384,22 @@ class EarthAnalog(TerrestrialPlanet):
         self._max_island_size = (2/3) * self._diameter
         self._min_island_size = (1/5) * self._diameter
 
-        self.set_hashes(seed)
+        self.set_hashes()
 
+
+
+##
+## GAS PLANETS
+##
+
+
+
+
+
+##
+## MOONS
+##
+        
 class ClassicMoon(MoonSetting):
 
     def __init__(self, diameter, orbiting_body):
@@ -396,6 +449,7 @@ class ClassicMoon(MoonSetting):
         self._biome_other = 'GREY5'
 
         self.set_hashes(seed)
+
 
 
 
