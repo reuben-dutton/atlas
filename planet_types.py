@@ -80,7 +80,11 @@ class BodySetting(object):
                     dist_ratio = 1 - dist_from_mountain/island_size
                     if dist_ratio > min_dist_ratio:
                         min_dist_ratio = dist_ratio
-            return noise - self._amplitude*(lnd + mnd + snd)*(1-min_dist_ratio)
+            noise = noise - self._amplitude*(lnd + mnd + snd)*(1-min_dist_ratio)
+            if noise < 0:
+                return 0
+            else:
+                return noise
         return noise
 
     def get_moisture_noise(self, node):
@@ -89,7 +93,6 @@ class BodySetting(object):
 
     def get_biome(self, node):
         height = ps.get_height(node)
-        
         moisture_level = math.ceil(self.get_moisture_noise(node))
         elevation_level = math.ceil(self._total_elevation_levels*(height-self._min_height)/self._height_range)
         
@@ -372,7 +375,7 @@ class EarthAnalog(TerrestrialPlanet):
 
         #Clouds
         self._clouds_boolean = True
-        self._cloud_color = (255, 255, 255, 200)
+        self._cloud_color = (255, 255, 255, 140)
         self._cloud_height = self._max_height
         self._cloud_noise_width = (1/5) * self._diameter
         self._cloud_noise_cutoff = 0.75
