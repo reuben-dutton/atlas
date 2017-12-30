@@ -440,6 +440,11 @@ class GifCanvas:
         '''
         del self._bodies[body]
         
+    def make_img(self, filepath='movie.jpeg'):
+        image = self.draw_image()
+        image.save(filepath, "JPEG")
+	
+
     def make_gif(self, fps=60, filepath='movie.gif'):
         ''' Generates a gif of the planets currently loaded in the GifCanvas.
 
@@ -509,6 +514,22 @@ def make_gif():
     light_vector = [-1, 0, 1]
     gifcanvas.set_lighting(light_vector)
     gifcanvas.make_gif()
+
+def make_img():
+    background_color = (0, 0, 0, 255)
+    canvas_size = (1280, 720)
+
+    seed = random.random()
+    complexity = 7
+    planet_types = [pt.EarthAnalog(500, seed), pt.IronPlanet(500, seed), pt.IcePlanet(500, seed)]
+    planet_type = random.choice(planet_types)
+    planet = PlanetObject(planet_type, complexity)
+
+    gifcanvas = GifCanvas(canvas_size, background_color)
+    gifcanvas.add_body(planet, 'centre')
+    light_vector = [-1, 0, 1]
+    gifcanvas.set_lighting(light_vector)
+    gifcanvas.make_img()
     
 if __name__ == "__main__":
     main()

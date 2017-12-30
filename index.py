@@ -7,7 +7,7 @@ at = 'EAAaKi61MD2cBAHfcBme3L1ZAdqsZBYKoIR312Dqcx30zYRgL81eDyx15JqhgkZCoUVulzTw8A
 
 graph = facebook.GraphAPI(access_token=at)
 
-pm.makegif()
+pm.make_img()
 
-graph.put_object(image=open('movie.gif', 'rb'), message='')
+graph.put_photo(image=open('movie.jpeg', 'rb'), message='')
 
