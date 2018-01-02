@@ -89,6 +89,16 @@ class BodySetting(object):
 
     def get_moisture_noise(self, node):
         noise = ps.perlin(node, self._moisture_noise_width, self._total_moisture_levels, self._mh)
+        try:
+            altitude = abs(math.asin(2*node[1]/self._diameter))
+        except:
+            altitude = 1
+
+        noise = (self._total_moisture_levels - 1)*noise*altitude**2/self._total_moisture_levels + altitude
+            
+            
+        if noise > self._total_moisture_levels:
+            noise = self._total_moisture_levels
         return noise
 
     def get_biome(self, node):
@@ -205,13 +215,13 @@ class IronPlanet(TerrestrialPlanet):
         self._biome_assignments = {}
         self._biome_assignments[(3, 4)] = 'ICE'
         self._biome_assignments[(3, 3)] = 'SNOW'
-        self._biome_assignments[(3, 2)] = 'SNOW'
+        self._biome_assignments[(3, 2)] = 'HIGH IRON'
         self._biome_assignments[(3, 1)] = 'MEDIUM IRON'
-        self._biome_assignments[(2, 4)] = 'HIGH IRON'
-        self._biome_assignments[(2, 3)] = 'MEDIUM IRON'
-        self._biome_assignments[(2, 2)] = 'LOW IRON'
+        self._biome_assignments[(2, 4)] = 'ICE'
+        self._biome_assignments[(2, 3)] = 'SNOW'
+        self._biome_assignments[(2, 2)] = 'MEDIUM IRON'
         self._biome_assignments[(2, 1)] = 'LOW IRON'
-        self._biome_assignments[(1, 4)] = 'MEDIUM IRON'
+        self._biome_assignments[(1, 4)] = 'SNOW'
         self._biome_assignments[(1, 3)] = 'MEDIUM IRON'
         self._biome_assignments[(1, 2)] = 'LOW IRON'
         self._biome_assignments[(1, 1)] = 'SOOT'
@@ -353,13 +363,13 @@ class EarthAnalog(TerrestrialPlanet):
         self._biome_assignments[(4, 3)] = 'TUNDRA'
         self._biome_assignments[(4, 2)] = 'BARE'
         self._biome_assignments[(4, 1)] = 'SCORCHED'
-        self._biome_assignments[(3, 6)] = 'TAIGA'
+        self._biome_assignments[(3, 6)] = 'SNOW'
         self._biome_assignments[(3, 5)] = 'TAIGA'
         self._biome_assignments[(3, 4)] = 'SHRUBLAND'
         self._biome_assignments[(3, 3)] = 'SHRUBLAND'
         self._biome_assignments[(3, 2)] = 'TEMPERATE DESERT'
         self._biome_assignments[(3, 1)] = 'TEMPERATE DESERT'
-        self._biome_assignments[(2, 6)] = 'TEMPERATE RAIN FOREST'
+        self._biome_assignments[(2, 6)] = 'SNOW'
         self._biome_assignments[(2, 5)] = 'TEMPERATE DECIDUOUS FOREST'
         self._biome_assignments[(2, 4)] = 'TEMPERATE DECIDUOUS FOREST'
         self._biome_assignments[(2, 3)] = 'GRASSLAND'
@@ -375,7 +385,7 @@ class EarthAnalog(TerrestrialPlanet):
 
         #Clouds
         self._clouds_boolean = True
-        self._cloud_color = (255, 255, 255, 140)
+        self._cloud_color = (255, 255, 255, 255)
         self._cloud_height = self._max_height
         self._cloud_noise_width = (1/5) * self._diameter
         self._cloud_noise_cutoff = 0.75

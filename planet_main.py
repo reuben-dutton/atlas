@@ -376,7 +376,11 @@ class GifCanvas:
                 mid = ps.get_middle_point(n1, n2, n3)
                 zcoord = mid[2]
                 color = ps.lighting(n1, n2, n3, face[3], self._light_vector)
+                #color = (120, 120, 0, 255)
+                #for testing lighting
                 draw_faces.append((zcoord, n1, n2, n3, color, position))
+
+            draw_faces = sorted(draw_faces)[math.ceil(len(draw_faces)/2):len(draw_faces)]
                 
             #level 5 takes 0.7 seconds
             #so about 65% of rendering time
@@ -441,6 +445,12 @@ class GifCanvas:
         del self._bodies[body]
         
     def make_img(self, filepath='movie.jpeg'):
+        ''' Generates a still image of the planet
+
+            Parameters:
+                filepath (str) : Where the image will be saved.
+                
+        '''
         image = self.draw_image()
         image.save(filepath, "JPEG")
 	
@@ -498,14 +508,13 @@ def main():
     gifcanvas.set_lighting(light_vector)
     gifcanvas.make_gif()
 
-def make_gif():
+def make_gif(complexity):
     background_color = (0, 0, 0, 255)
     canvas_size = (750, 750)
 
     #create the planet type and planet object
     seed = random.random()
-    complexity = 5
-    planettype = pt.IcePlanet(450, seed)
+    planettype = pt.EarthAnalog(450, seed)
     planet = PlanetObject(planettype, complexity)
 
     #draw the planet
@@ -515,14 +524,16 @@ def make_gif():
     gifcanvas.set_lighting(light_vector)
     gifcanvas.make_gif()
 
-def make_img():
+def make_img(complexity):
     background_color = (0, 0, 0, 255)
     canvas_size = (1280, 720)
 
     seed = random.random()
-    complexity = 7
-    planet_types = [pt.EarthAnalog(500, seed), pt.IronPlanet(500, seed), pt.IcePlanet(500, seed)]
+    planet_types = [pt.EarthAnalog(500, seed),
+                    pt.IronPlanet(500, seed),
+                    pt.IcePlanet(500, seed)]
     planet_type = random.choice(planet_types)
+    planet_type = pt.IronPlanet(500, seed)
     planet = PlanetObject(planet_type, complexity)
 
     gifcanvas = GifCanvas(canvas_size, background_color)
