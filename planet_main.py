@@ -533,7 +533,6 @@ def make_img(complexity):
                     pt.IronPlanet(500, seed),
                     pt.IcePlanet(500, seed)]
     planet_type = random.choice(planet_types)
-    planet_type = pt.IronPlanet(500, seed)
     planet = PlanetObject(planet_type, complexity)
 
     gifcanvas = GifCanvas(canvas_size, background_color)
