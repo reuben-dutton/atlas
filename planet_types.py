@@ -185,7 +185,7 @@ class IronPlanet(TerrestrialPlanet):
         super().__init__(diameter, seed)
         
         self._planet_type = 'IRON TERRESTRIAL'
-        self._attr = {'atmosphere': 0}
+        self._attr = {'atmosphere': 0.1}
 
         #Terrain_noise_generation
         self._large_noise_weight = 1
@@ -254,7 +254,7 @@ class IcePlanet(TerrestrialPlanet):
         super().__init__(diameter, seed)
         
         self._planet_type = 'ICE TERRESTRIAL'
-        self._attr = {'atmosphere': 0}
+        self._attr = {'atmosphere': 0.12}
 
         #Terrain_noise_generation
         self._large_noise_weight = 1
@@ -324,7 +324,7 @@ class EarthAnalog(TerrestrialPlanet):
         super().__init__(diameter, seed)
         
         self._planet_type = 'TERRESTRIAL OCEANS'
-        self._attr = {'atmosphere': 0.3}
+        self._attr = {'atmosphere': 0.6}
 
         #Terrain_noise_generation
         self._large_noise_weight = 1
