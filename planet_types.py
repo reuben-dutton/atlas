@@ -41,6 +41,9 @@ class BodySetting(object):
         self._diameter = diameter
         self._seed = seed
 
+    def get_attributes(self):
+        return self._attr
+
     def set_hashes(self):
         ''' Sets the hashes that are used for random generation of terrain,
             moisture and clouds if applicable.
@@ -182,6 +185,7 @@ class IronPlanet(TerrestrialPlanet):
         super().__init__(diameter, seed)
         
         self._planet_type = 'IRON TERRESTRIAL'
+        self._attr = {'atmosphere': 0}
 
         #Terrain_noise_generation
         self._large_noise_weight = 1
@@ -250,6 +254,7 @@ class IcePlanet(TerrestrialPlanet):
         super().__init__(diameter, seed)
         
         self._planet_type = 'ICE TERRESTRIAL'
+        self._attr = {'atmosphere': 0}
 
         #Terrain_noise_generation
         self._large_noise_weight = 1
@@ -319,6 +324,7 @@ class EarthAnalog(TerrestrialPlanet):
         super().__init__(diameter, seed)
         
         self._planet_type = 'TERRESTRIAL OCEANS'
+        self._attr = {'atmosphere': 0.3}
 
         #Terrain_noise_generation
         self._large_noise_weight = 1
@@ -420,6 +426,7 @@ class ClassicMoon(MoonSetting):
         super().__init__(diameter, orbiting_body)
         
         self._planet_type = 'CLASSIC MOON'
+        self._attr = {'atmosphere': 0}
 
         #Terrain_generation
         self._max_island_number = 35

@@ -29,6 +29,7 @@ class PlanetObject(object):
         '''
         self._planet = planet
         self._radius = self._planet.get_diameter() * 0.5
+        self._attr = self._planet.get_attributes()
         self.define_base_nodes()
         self.define_base_faces()
         self.complexify(complexity)
@@ -248,7 +249,7 @@ class PlanetObject(object):
         #(if applicable for that planet type)
         island_array = self._planet.get_islands(self._nodes)
         new_nodes = []
-        #For each nodoe in the grid
+        #For each node in the grid
         for node in self._nodes:
             #Ask the planet_type how high that node should be (taking into account
             #possible islands)
@@ -350,7 +351,8 @@ class GifCanvas:
         #Create a number of stars with a random star colour
         #and random position.
         for i in range(int(self._canvas_width*self._canvas_height/1000)):
-            star_color = colors[random.randrange(8)]
+            r, g, b, a = colors[random.randrange(8)]
+            star_color = (r, g, b, int(a*random.random()*0.5))
             xcentre = random.randrange(self._canvas_width)
             ycentre = random.randrange(self._canvas_height)
             star_size = random.randrange(star_min_size, star_max_size+1)
@@ -375,7 +377,7 @@ class GifCanvas:
                 n1, n2, n3 = body._nodes[face[0]], body._nodes[face[1]], body._nodes[face[2]]
                 mid = ps.get_middle_point(n1, n2, n3)
                 zcoord = mid[2]
-                color = ps.lighting(n1, n2, n3, face[3], self._light_vector)
+                color = ps.lighting(n1, n2, n3, face[3], self._light_vector, body._attr)
                 #color = (120, 120, 0, 255)
                 #for testing lighting
                 draw_faces.append((zcoord, n1, n2, n3, color, position))
@@ -396,7 +398,7 @@ class GifCanvas:
                 n3 = ps.change_distance(n3, cloud_height)
                 mid = ps.get_middle_point(n1, n2, n3)
                 zcoord = mid[2]
-                color = ps.lighting(n1, n2, n3, color, self._light_vector)
+                color = ps.lighting(n1, n2, n3, color, self._light_vector, body._attr)
                 draw_faces.append((zcoord, n1, n2, n3, color, position))
                 
             #level 5 takes 0.03 seconds
@@ -444,7 +446,7 @@ class GifCanvas:
         '''
         del self._bodies[body]
         
-    def make_img(self, filepath='movie.jpeg'):
+    def make_img(self, filepath='movie.gif'):
         ''' Generates a still image of the planet
 
             Parameters:
@@ -452,7 +454,7 @@ class GifCanvas:
                 
         '''
         image = self.draw_image()
-        image.save(filepath, "JPEG")
+        image.save(filepath, "GIF")
 	
 
     def make_gif(self, fps=60, filepath='movie.gif'):
@@ -537,7 +539,7 @@ def make_img(complexity):
 
     gifcanvas = GifCanvas(canvas_size, background_color)
     gifcanvas.add_body(planet, 'centre')
-    light_vector = [-1, 0, 1]
+    light_vector = [-1, 0, 0.7]
     gifcanvas.set_lighting(light_vector)
     gifcanvas.make_img()
     

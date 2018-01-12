@@ -191,7 +191,7 @@ def crossproduct(node1, node2, node3):
         newy = -newy
         newz = -newz
     
-    return (newx, newy, newz)
+    return [newx, newy, newz]
 
 def dotproduct(vector1, vector2):
     '''Returns the dotproduct between two vectors.
@@ -207,7 +207,7 @@ def dotproduct(vector1, vector2):
     return vector1[0]*vector2[0] + vector1[1]*vector2[1] + vector1[2]*vector2[2]
 
 
-def lighting(node1, node2, node3, color, light):
+def lighting(node1, node2, node3, color, light, attr):
     '''Calculates how much light is being cast onto a face.
 
         Parameters:
@@ -220,17 +220,27 @@ def lighting(node1, node2, node3, color, light):
         Returns:
             color (array<int, int, int>) : The new color of the face
     '''
+
+    normal = crossproduct(node1, node2, node3)
+    light = light
+    view = [0, 0, 1]
+    reflection = 2*(dotproduct(normal, light))*np.array(normal) - np.array(light)
+    reflection = reflection.tolist()
+    avg_z = (node1[2] + node2[2] + node3[2])/3
+
+    fog_mod = attr['atmosphere']
+
+    ambient = np.array(color)
+    diffuse = 0.75*max(0, dotproduct(normal, light))*np.array(color)
+    new_color = 0.4*ambient + 0.6*diffuse
     
-    cross_product = crossproduct(node1, node2, node3)
-    dot_product = dotproduct(light, cross_product)
-    angle = math.degrees(math.acos(dot_product/(get_height(cross_product)*get_height(light))))
-    r, g, b, a = color
-    angleratio = 1-angle/180
-    #higher if more light, lower if less light
-    angleratio = 2*angleratio**2 - (4/3)*angleratio**3 + (1/3)*angleratio
-    #smoothing function
-    r, g, b = r*angleratio, g*angleratio, b*angleratio
-    return (int(r), int(g), int(b), a)
+    fog_p = math.exp(-((260-avg_z)/260)*fog_mod)
+    new_color = fog_p*new_color+(1-fog_p)*np.array([255, 255, 255, 255])
+
+    r, g, b, a = new_color.tolist()
+    new_color = (int(r), int(g), int(b), 255)
+    
+    return new_color
         
         
         
