@@ -1,5 +1,5 @@
 import planet_main as pm
 
 
-pm.make_img(5)
+pm.make_img(7)
 

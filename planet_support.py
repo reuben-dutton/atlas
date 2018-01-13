@@ -231,7 +231,7 @@ def lighting(node1, node2, node3, color, light, attr):
     fog_mod = attr['atmosphere']
 
     ambient = np.array(color)
-    diffuse = 0.75*max(0, dotproduct(normal, light))*np.array(color)
+    diffuse = 0.85*max(0, dotproduct(normal, light))*np.array(color)
     new_color = 0.4*ambient + 0.6*diffuse
     
     fog_p = math.exp(-((260-avg_z)/260)*fog_mod)

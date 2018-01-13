@@ -8,5 +8,5 @@ graph = facebook.GraphAPI(access_token=at)
 
 pm.make_img(7)
 
-graph.put_photo(image=open('movie.jpeg', 'rb'), message='')
+graph.put_photo(image=open('movie.gif', 'rb'), message='')
 
