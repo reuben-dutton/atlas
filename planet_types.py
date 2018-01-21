@@ -324,7 +324,7 @@ class EarthAnalog(TerrestrialPlanet):
         super().__init__(diameter, seed)
         
         self._planet_type = 'TERRESTRIAL OCEANS'
-        self._attr = {'atmosphere': 0.30}
+        self._attr = {'atmosphere': 0.28}
 
         #Terrain_noise_generation
         self._large_noise_weight = 1

@@ -1,0 +1,25 @@
+{"0": 
+	{"name": "Hypergiant",
+	 "weight": 1},
+ "I": 
+	{"name": "Supergiant",
+	 "weight": 2},
+ "II": 
+	{"name": "Bright giant",
+	 "weight": 3},
+ "III": 
+	{"name": "Giant",
+	 "weight": 4},
+ "IV": 
+	{"name": "Subgiant",
+	 "weight": 5},
+ "V": 
+	{"name": "Main-sequence",
+	 "weight": 50},
+ "VI": 
+	{"name": "Sub-dwarf",
+	 "weight": 5},
+ "VII": 
+	{"name": "White dwarf",
+	 "weight": 5}
+}
